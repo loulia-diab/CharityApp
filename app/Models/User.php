@@ -23,11 +23,15 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    public function volunteerRequests()
+    public function volunteer_requests()
     {
         return $this->hasMany(Volunteer_request::class);
     }
 
+    public function beneficiary_requests()
+    {
+        return $this->hasMany(Beneficiary_request::class);
+    }
 
     protected function casts(): array
     {

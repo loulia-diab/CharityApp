@@ -54,4 +54,9 @@ class Volunteer_request extends Model
         return $this->belongsTo(Admin::class);
     }
 
+    public function volunteer()
+    {
+        return $this->hasOne(Volunteer::class);
+    }
+
 }

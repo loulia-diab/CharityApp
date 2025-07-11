@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SendCodeResetPassword;
 use App\Models\Admin;
+use App\Models\ResetPasswordForAdmin;
+use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AdminAuthController extends Controller
@@ -73,79 +77,80 @@ class AdminAuthController extends Controller
 
         return response()->json($admin);
     }
-/*
-    public function setAdminLanguage(Request $request)
+
+    public function forgotPassword(Request $request)
     {
-        // التحقق من المدخلات
-        $validated = $request->validate([
-            'preferred_language' => 'required|string|in:en,ar', // en أو ar فقط
+        $data = $request->validate([
+            'email' => 'required|email|exists:admins',
         ]);
 
-        // الحصول على الإدمن من الـ guard المناسب
-        $admin = auth('admin')->user();
+        // Delete all old code that the user sent before.
+        ResetPasswordForAdmin::query()->where('email', $request->email)->delete();
 
-        if (!$admin) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
+        // Generate random code
+        $data['code'] = mt_rand(100000, 999999);
 
-        $preferredLanguage = $validated['preferred_language'];
+        // Create a new code
+        $codeData = ResetPasswordForAdmin::query()->create($data);
 
-        // تحديث اللغة في قاعدة البيانات
-        $admin->update([
-            'preferred_language' => $preferredLanguage,
-        ]);
-
-        // تعيين اللغة للتطبيق الحالي
-        app()->setLocale($preferredLanguage);
+        // Send email to user
+        Mail::to($request->email)->send(new SendCodeResetPassword($codeData->code));
 
         return response()->json([
-            'message' => 'Language set successfully',
-            'preferred_language' => $preferredLanguage,
-        ], 200);
-    }*/
-
-    /*
-    public function logout(Request $request)
-    {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json([
-            'message'=>'admin logged out successfully'
+            'message' => trans('code.sent'),
+            'code'=>$data['code']
         ],200);
     }
-   */
 
-    /*
-    public function login(Request $request)
+    public function checkCode(Request $request)
     {
-        $credentials = $request->validate([
-            'email'    => ['required', 'email'],
-            'password' => ['required'],
+        $request->validate([
+            'code' => 'required|string|exists:reset_password_for_admins',
         ]);
 
-        if (Auth::guard('admin')->attempt($credentials)) {
-            $request->session()->regenerate();
+        // find the code
+        $passwordReset = ResetPasswordForAdmin::query()-> firstWhere('code', $request->code);
 
-            return response()->json([
-                'message' => 'تم تسجيل الدخول بنجاح',
-                'admin'   => Auth::guard('admin')->user(),
-            ], 200);
+        //Check if it has not expired: the time is one hour
+        if ($passwordReset->created_at > now()->addHour()) {
+            $passwordReset->delete();
+            return response()->json(['message' => trans('passwords.code_is_expire')], 422);
         }
 
-        return response()->json([
-            'message' => 'بيانات الدخول غير صحيحة',
-        ], 401);
-    }
-
-
-    public function logout(Request $request)
-    {
-        Auth::guard('admin')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return response()->json([
-            'message' => 'تم تسجيل الخروج بنجاح',
+        return response([
+            'code' => $passwordReset->code,
+            'message' => trans('code_is_valid')
         ], 200);
     }
-*/
+
+    public function resetPassword(Request $request)
+    {
+        $input= $request->validate([
+            'code' => 'required|string|exists:reset_password_for_admins',
+            'password' => ['required','string','confirmed',]
+        ]);
+
+        // find the code
+        $passwordReset = ResetPasswordForAdmin::query()->firstWhere('code', $request['code']);
+
+        //Check if it has not expired: the time is one hour
+        if ($passwordReset['created_at'] > now()->addHour()) {
+            $passwordReset->delete();
+            return response(['message' => trans('passwords.code_is_expire')], 422);
+        }
+
+        // find user's email
+        $admin = Admin::query()->firstWhere('email', $passwordReset['email']);
+
+        // update user password
+        $input['password']=bcrypt( $input['password']);
+        $admin->update(['password' => $input['password']]);
+
+        // delete current code
+        $passwordReset->delete();
+
+        return response([
+            'message' =>'password has been successfully reset',
+        ], 200);
+    }
 }

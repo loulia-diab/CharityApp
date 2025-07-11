@@ -11,10 +11,15 @@ class UserController extends Controller
 {
     public function showProfile()
     {
-        $user = Auth::user();
+        $user = auth()->guard('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
         $data = [
             'name' => $user->name,
+            'phone' => $user->phone,
             'profile_image' => $user->profile_image ? asset('storage/' . $user->profile_image) : null,
         ];
         return response()->json([
@@ -23,9 +28,14 @@ class UserController extends Controller
         ], 200);
     }
 
+
     public function updateProfile(Request $request)
     {
-        $user = Auth::user();
+        $user = auth()->guard('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
         // التحقق من البيانات المُرسلة
         $validated = $request->validate([
@@ -45,7 +55,6 @@ class UserController extends Controller
                     \Log::warning("Image does not exist: {$relativePath}");
                 }
             }
-
             // تخزين الصورة الجديدة
             $path = $request->file('profile_image')->store('profile_images', 'public');
             $validated['profile_image'] = $path;
@@ -68,6 +77,7 @@ class UserController extends Controller
         $data = [
             'name' => $user->name,
             'profile_image' => $user->profile_image,
+
         ];
 
         return response()->json([

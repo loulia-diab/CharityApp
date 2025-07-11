@@ -19,12 +19,14 @@ class UserAuthController extends Controller
                 'name'     => 'required|string|max:255',
                 'phone'    => 'required|string|unique:users,phone|digits:10',
                 'password' => 'required|string|min:8|confirmed',
+                'preferred_language' => 'required|in:en,ar',
             ]);
 
             $user = User::create([
                 'name'     => $request->name,
                 'phone'    => $request->phone,
                 'password' => Hash::make($request->password),
+                'preferred_language' => $request->preferred_language,
             ]);
 
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -87,51 +89,5 @@ class UserAuthController extends Controller
             'message'=>'user logged out successfully'
         ],200);
     }
-/*
-    public function setUserLanguage(Request $request)
-    {
-        // التحقق من المدخلات
-        $validated = $request->validate([
-            'preferred_language' => 'required|string|in:en,ar', // تحديد أن اللغة يجب أن تكون واحدة من 'en' أو 'ar'
-        ]);
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorised'], 401);
-        }
-        $preferredLanguage = $validated['preferred_language'];
 
-        $user->update([
-            'preferred_language' => $preferredLanguage,
-        ]);
-        app()->setLocale($preferredLanguage);
-        return response()->json([
-            'message' => 'Language set successfully',
-            'preferred_language' => $preferredLanguage,
-        ], 200);
-    }*/
-
-    /*
-        public function changeLanguage(Request $request)
-        {
-            // التحقق من المدخلات
-            $validated = $request->validate([
-                'preferred_language' => 'required|string|in:en,ar',
-            ]);
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(['message' => 'Unauthorised'], 401);
-            }
-            $preferredLanguage = $validated['preferred_language'];
-
-            $user->update([
-                'preferred_language' => $preferredLanguage,
-            ]);
-            app()->setLocale($preferredLanguage);
-
-            return response()->json([
-                'message' => 'Language changed successfully',
-                'preferred_language' => $preferredLanguage,
-            ], 200);
-        }
-    */
 }

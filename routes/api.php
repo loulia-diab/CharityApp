@@ -1,12 +1,12 @@
 <?php
 
-use App\Http\Controllers\Application\UserAuthController;
-use App\Http\Controllers\Application\UserController;
-use App\Http\Controllers\Dashboard\AdminAuthController;
-use App\Http\Controllers\VolunteerRequestController;
+use App\Http\Controllers\admin\AdminAuthController;
+use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\user\UserAuthController;
+use App\Http\Controllers\user\UserController;
+use App\Http\Controllers\volunteer\VolunteerRequestController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\LanguageController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();

@@ -1,12 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Dashboard;
+namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\SendCodeResetPassword;
 use App\Models\Admin;
 use App\Models\ResetPasswordForAdmin;
-use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;

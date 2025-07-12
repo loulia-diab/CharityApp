@@ -35,6 +35,12 @@ class User extends Authenticatable
         return $this->hasMany(Beneficiary_request::class);
     }
 
+    public function otps()
+    {
+        return $this->hasMany(PhoneOtp::class, 'phone', 'phone');
+    }
+
+
     protected function casts(): array
     {
         return [

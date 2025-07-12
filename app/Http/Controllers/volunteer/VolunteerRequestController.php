@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\volunteer;
 
+use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Day;
 use App\Models\Volunteer;
+use App\Models\Volunteer_request;
 use App\Models\Volunteering_type;
 use Illuminate\Http\Request;
-use App\Models\Volunteer_request;
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class VolunteerRequestController extends Controller

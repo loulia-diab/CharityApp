@@ -153,7 +153,6 @@ class CampaignController extends Controller
     }
 
 
-
     public function archiveCampaign(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -230,7 +229,6 @@ class CampaignController extends Controller
     }
 
 
-
     public function updateCampaign(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -243,7 +241,7 @@ class CampaignController extends Controller
         $descField = "description_{$locale}";
 
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
             'description' => 'required|string',
             'image' => 'nullable|string|max:255',
         ]);
@@ -433,6 +431,11 @@ class CampaignController extends Controller
     // user //////////////////////
     public function getAllVisibleCampaignsForUser()
     {
+        $user = auth()->guard('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
@@ -469,6 +472,11 @@ class CampaignController extends Controller
     }
     public function getVisibleCampaignsByCategoryForUser(Request $request, $categoryId)
     {
+        $user = auth()->guard('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
@@ -507,6 +515,11 @@ class CampaignController extends Controller
     }
     public function getVisibleCampaignByIdForUser($campaign_id)
     {
+        $user = auth()->guard('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
@@ -550,7 +563,6 @@ class CampaignController extends Controller
             ]);
         }
     }
-
 
 // الإحصائيات
     public function campaignStatistics()

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Campaigns\Campaign;
 use Illuminate\Database\Eloquent\Model;
 
 class Volunteer extends Model
@@ -19,5 +20,11 @@ class Volunteer extends Model
     public function volunteer_request()
     {
         return $this->belongsTo(Volunteer_request::class);
+    }
+    public function campaigns()
+    {
+        return $this->belongsToMany(Campaign::class, 'campaign_volunteer')
+            ->withPivot('admin_id')
+            ->withTimestamps();
     }
 }

@@ -20,4 +20,21 @@ class Beneficiary extends Model
     {
         return $this->belongsTo(Beneficiary_request::class);
     }
+
+    public function campaigns()
+    {
+        return $this->belongsToMany(Beneficiary::class, 'campaign_beneficiary')
+            ->withTimestamps()
+            ->withPivot('admin_id');
+    }
+
+    public function humanCases()
+    {
+        return $this->hasMany(HumanCase::class);
+    }
+
+    public function sponsorships()
+    {
+        return $this->hasMany(Sponsorship::class);
+    }
 }

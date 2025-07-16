@@ -17,6 +17,7 @@ class Admin extends Authenticatable
     protected $fillable = [
         'email',
         'password',
+        'preferred_language',
     ];
 
     protected $hidden = [

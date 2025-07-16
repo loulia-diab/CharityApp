@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('name_category_en');
             $table->string('name_category_ar');
             $table->string('image_category')->nullable();
+            $table->string('main_category_en');
+            $table->string('main_category_ar');
            // $table->double('amount')->nullable();
             $table->timestamps();
         });

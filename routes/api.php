@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\admin\AdminAuthController;
 use App\Http\Controllers\beneficiary\BeneficiaryController;
+use App\Http\Controllers\beneficiary\BeneficiaryRequestController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignBeneficiaryController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignController;
@@ -36,16 +37,6 @@ Route::prefix('user')->group(function () {
         Route::post('/updateProfile', [UserController::class, 'updateProfile']);
     });
 });
-
-
-
-Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
-
-    Route::post('/addVolunteerRequest', [VolunteerRequestController::class, 'addVolunteerRequest']);
-    Route::get('/getMyVolunteerRequests', [VolunteerRequestController::class, 'getMyVolunteerRequests']);
-});
-
-
 // Routes for admin
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);
@@ -55,12 +46,19 @@ Route::prefix('admin')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
-
     });
 });
 
 Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
 
+Route::prefix('volunteer_request')->group(function () {
+    Route::post('/add', [VolunteerRequestController::class, 'addVolunteerRequest']);
+    Route::get('/getAllUserRequests', [VolunteerRequestController::class, 'getAllUserVolunteerRequests']);
+    Route::get('/getDetails/{id}', [VolunteerRequestController::class, 'getVolunteerRequestDetails']);
+});
+Route::prefix('beneficiary_request')->group(function () {
+    Route::post('/add', [BeneficiaryRequestController::class, 'add']);
+});
 Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);
     Route::get('/showAll',[CategoryController::class,'getAllCategories']);

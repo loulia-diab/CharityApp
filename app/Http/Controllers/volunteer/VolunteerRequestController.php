@@ -125,7 +125,8 @@ class VolunteerRequestController extends Controller
             ], 500);
         }
     }
-    public function getMyVolunteerRequests(Request $request)
+
+    public function getAllUserVolunteerRequests(Request $request)
     {
         $user = auth()->guard('api')->user();
 
@@ -133,55 +134,138 @@ class VolunteerRequestController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $locale = app()->getLocale(); // ar أو en
+        $locale = app()->getLocale();
         $fallback = $locale === 'ar' ? 'en' : 'ar';
 
         $requests = Volunteer_request::where('user_id', $user->id)
-            ->with([
-                'days:id,name_' . $locale, 'days:id,name_' . $fallback,
-                'types:id,name_' . $locale, 'types:id,name_' . $fallback
-            ])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($request) use ($locale, $fallback) {
                 return [
                     'id' => $request->id,
-                    'user_id' => $request->user_id,
-                    'admin_id' => $request->admin_id,
                     'full_name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
-                    'gender' => $request->{'gender_' . $locale} ?? $request->{'gender_' . $fallback},
-                    'birth_date' => $request->birth_date,
-                    'address' => $request->{'address_' . $locale} ?? $request->{'address_' . $fallback},
-                    'study_qualification' => $request->{'study_qualification_' . $locale} ?? $request->{'study_qualification_' . $fallback},
-                    'job' => $request->{'job_' . $locale} ?? $request->{'job_' . $fallback},
-                    'preferred_times' => $request->{'preferred_times_' . $locale} ?? $request->{'preferred_times_' . $fallback},
-                    'has_previous_volunteer' => $request->has_previous_volunteer,
-                    'previous_volunteer' => $request->{'previous_volunteer_' . $locale} ?? $request->{'previous_volunteer_' . $fallback},
-                    'phone' => $request->phone,
-                    'notes' => $request->{'notes_' . $locale} ?? $request->{'notes_' . $fallback},
                     'status' => $request->{'status_' . $locale} ?? $request->{'status_' . $fallback},
-                    //'reason_of_rejection' => $request->{'reason_of_rejection_' . $locale} ?? $request->{'reason_of_rejection_' . $fallback},
-                    'days' => $request->days->map(function ($day) use ($locale, $fallback) {
-                        return [
-                            'id' => $day->id,
-                            'name' => $day->{'name_' . $locale} ?? $day->{'name_' . $fallback},
-                        ];
-                    }),
-                    'types' => $request->types->map(function ($type) use ($locale, $fallback) {
-                        return [
-                            'id' => $type->id,
-                            'name' => $type->{'name_' . $locale} ?? $type->{'name_' . $fallback},
-                        ];
-                    }),
                     'created_at' => $request->created_at->toDateTimeString(),
-                    //'updated_at' => $request->updated_at->toDateTimeString(),
                 ];
             });
 
         return response()->json(['data' => $requests]);
     }
 
+    public function getVolunteerRequestDetails(Request $request, $id)
+    {
+        $user = auth()->guard('api')->user();
+        $admin = auth()->guard('admin')->user();
 
+        if (!$user && !$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale();
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        // إحضار الطلب (إذا لم يكن موجودًا يرجع 404)
+        $requestData = Volunteer_request::with(['days', 'types'])->findOrFail($id);
+
+        // إذا المستخدم هو يوزر، تأكد أن الطلب له
+        if ($user && $requestData->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        // إعداد البيانات للعرض
+        $data = [
+            'id' => $requestData->id,
+            'user_id' => $requestData->user_id,
+            'admin_id' => $requestData->admin_id,
+            'full_name' => $requestData->{'full_name_' . $locale} ?? $requestData->{'full_name_' . $fallback},
+            'gender' => $requestData->{'gender_' . $locale} ?? $requestData->{'gender_' . $fallback},
+            'birth_date' => $requestData->birth_date,
+            'address' => $requestData->{'address_' . $locale} ?? $requestData->{'address_' . $fallback},
+            'study_qualification' => $requestData->{'study_qualification_' . $locale} ?? $requestData->{'study_qualification_' . $fallback},
+            'job' => $requestData->{'job_' . $locale} ?? $requestData->{'job_' . $fallback},
+            'preferred_times' => $requestData->{'preferred_times_' . $locale} ?? $requestData->{'preferred_times_' . $fallback},
+            'has_previous_volunteer' => $requestData->has_previous_volunteer,
+            'previous_volunteer' => $requestData->{'previous_volunteer_' . $locale} ?? $requestData->{'previous_volunteer_' . $fallback},
+            'phone' => $requestData->phone,
+            'notes' => $requestData->{'notes_' . $locale} ?? $requestData->{'notes_' . $fallback},
+            'status' => $requestData->{'status_' . $locale} ?? $requestData->{'status_' . $fallback},
+            'reason_of_rejection' => $requestData->{'reason_of_rejection_' . $locale} ?? $requestData->{'reason_of_rejection_' . $fallback},
+            'days' => $requestData->days->map(function ($day) use ($locale, $fallback) {
+                return [
+                    'id' => $day->id,
+                    'name' => $day->{'name_' . $locale} ?? $day->{'name_' . $fallback},
+                ];
+            }),
+            'types' => $requestData->types->map(function ($type) use ($locale, $fallback) {
+                return [
+                    'id' => $type->id,
+                    'name' => $type->{'name_' . $locale} ?? $type->{'name_' . $fallback},
+                ];
+            }),
+            'created_at' => $requestData->created_at->toDateTimeString(),
+        ];
+
+        return response()->json(['data' => $data]);
+    }
+
+    /*
+        public function getMyVolunteerRequests(Request $request)
+        {
+            $user = auth()->guard('api')->user();
+
+            if (!$user) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            $locale = app()->getLocale(); // ar أو en
+            $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+            $requests = Volunteer_request::where('user_id', $user->id)
+                ->with([
+                    'days:id,name_' . $locale, 'days:id,name_' . $fallback,
+                    'types:id,name_' . $locale, 'types:id,name_' . $fallback
+                ])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($request) use ($locale, $fallback) {
+                    return [
+                        'id' => $request->id,
+                        'user_id' => $request->user_id,
+                        'admin_id' => $request->admin_id,
+                        'full_name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
+                        'gender' => $request->{'gender_' . $locale} ?? $request->{'gender_' . $fallback},
+                        'birth_date' => $request->birth_date,
+                        'address' => $request->{'address_' . $locale} ?? $request->{'address_' . $fallback},
+                        'study_qualification' => $request->{'study_qualification_' . $locale} ?? $request->{'study_qualification_' . $fallback},
+                        'job' => $request->{'job_' . $locale} ?? $request->{'job_' . $fallback},
+                        'preferred_times' => $request->{'preferred_times_' . $locale} ?? $request->{'preferred_times_' . $fallback},
+                        'has_previous_volunteer' => $request->has_previous_volunteer,
+                        'previous_volunteer' => $request->{'previous_volunteer_' . $locale} ?? $request->{'previous_volunteer_' . $fallback},
+                        'phone' => $request->phone,
+                        'notes' => $request->{'notes_' . $locale} ?? $request->{'notes_' . $fallback},
+                        'status' => $request->{'status_' . $locale} ?? $request->{'status_' . $fallback},
+                        //'reason_of_rejection' => $request->{'reason_of_rejection_' . $locale} ?? $request->{'reason_of_rejection_' . $fallback},
+                        'days' => $request->days->map(function ($day) use ($locale, $fallback) {
+                            return [
+                                'id' => $day->id,
+                                'name' => $day->{'name_' . $locale} ?? $day->{'name_' . $fallback},
+                            ];
+                        }),
+                        'types' => $request->types->map(function ($type) use ($locale, $fallback) {
+                            return [
+                                'id' => $type->id,
+                                'name' => $type->{'name_' . $locale} ?? $type->{'name_' . $fallback},
+                            ];
+                        }),
+                        'created_at' => $request->created_at->toDateTimeString(),
+                        //'updated_at' => $request->updated_at->toDateTimeString(),
+                    ];
+                });
+
+            return response()->json(['data' => $requests]);
+        }
+
+    */
     public function filterVolunteerRequests(Request $request)
     {
         $admin = auth()->guard('admin')->user();
@@ -235,7 +319,7 @@ class VolunteerRequestController extends Controller
         return response()->json(['data' => $requests]);
     }
 
-
+/*
     public function getVolunteerRequestDetails($id, Request $request)
     {
         $admin = auth()->guard('admin')->user();
@@ -284,8 +368,7 @@ class VolunteerRequestController extends Controller
             'updated_at' => $volunteer->updated_at->toDateTimeString()
         ]);
     }
-
-
+*/
     public function updateVolunteerRequestStatus(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();

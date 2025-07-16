@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('gender_en')->nullable();
             $table->date('birth_date');
             $table->string('marital_status_ar')->nullable();
-            $table->string('marital_status_er')->nullable();
+            $table->string('marital_status_en')->nullable();
             $table->integer('num_of_members');
             $table->string('study_ar')->nullable();
             $table->string('study_en')->nullable();
@@ -40,14 +40,19 @@ return new class extends Migration
             $table->string('address_ar')->nullable();
             $table->string('address_en')->nullable();
             $table->string('phone');
-            $table->string('main_category');
-            $table->string('sub_category');
+            $table->string('main_category_ar')->nullable();
+            $table->string('main_category_en')->nullable();
+            $table->string('sub_category_ar')->nullable();
+            $table->string('sub_category_en')->nullable();
             $table->text('notes_ar')->nullable();
             $table->text('notes_en')->nullable();
-            $table->string('status_ar')->nullable();
-            $table->string('status_en')->nullable();
+            $table->string('status_ar')->default('قيد الانتظار');
+            $table->string('status_en') ->default('pending');
             $table->string('reason_of_rejection_ar')->nullable();
             $table->string('reason_of_rejection_en')->nullable();
+            $table->string('priority_ar')->nullable();
+            $table->string('priority_en')->nullable();
+            $table->boolean('is_sorted');
             $table->timestamps();
         });
     }

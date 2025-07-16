@@ -35,8 +35,8 @@ return new class extends Migration
             $table->string('phone');
             $table->string('notes_ar')->nullable();
             $table->string('notes_en')->nullable();
-            $table->string('status_ar')->default('معلق');;
-            $table->string('status_en')->default('draft');;
+            $table->string('status_ar')->default('قيد الانتظار');
+            $table->string('status_en')->default('pending');
             $table->string('reason_of_rejection_ar')->nullable();
             $table->string('reason_of_rejection_en')->nullable();
             $table->timestamps();

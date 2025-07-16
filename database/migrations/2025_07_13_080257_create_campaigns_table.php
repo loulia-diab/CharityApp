@@ -25,7 +25,7 @@ return new class extends Migration
             $table->double('collected_amount')->default(0);
             $table->date('start_date');
             $table->date('end_date');
-            $table->timestamp('completed_at')->nullable()->after('end_date');
+            $table->timestamp('completed_at')->nullable();
             $table->timestamps();
         });
     }

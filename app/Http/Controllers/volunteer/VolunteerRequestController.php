@@ -266,6 +266,7 @@ class VolunteerRequestController extends Controller
         }
 
     */
+    /*
     public function filterVolunteerRequests(Request $request)
     {
         $admin = auth()->guard('admin')->user();
@@ -318,7 +319,7 @@ class VolunteerRequestController extends Controller
 
         return response()->json(['data' => $requests]);
     }
-
+*/
 /*
     public function getVolunteerRequestDetails($id, Request $request)
     {

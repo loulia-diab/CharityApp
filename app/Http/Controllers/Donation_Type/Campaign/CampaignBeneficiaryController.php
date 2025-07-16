@@ -4,15 +4,20 @@ namespace App\Http\Controllers\Donation_Type\Campaign;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaigns\Campaign;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
 class CampaignBeneficiaryController extends Controller
 {
     public function addBeneficiariesToCampaign(Request $request, $campaignId)
     {
+        $locale = app()->getLocale();
+
         $admin = auth('admin')->user();
         if (!$admin) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized'
+            ], 401);
         }
 
         $request->validate([
@@ -21,77 +26,88 @@ class CampaignBeneficiaryController extends Controller
         ]);
 
         try {
-            $campaign = Campaign::findOrFail($campaignId);
+            $campaign = Campaign::with('category')->findOrFail($campaignId);
 
-            // نضيف أو نحتفظ بالمستفيدين بدون حذف الموجودين سابقاً
-            $campaign->beneficiaries()->syncWithoutDetaching(
-                array_map(fn($id) => ['admin_id' => $admin->id], $request->beneficiary_ids)
-            );
+            if (!$campaign->category || $campaign->category->main_category !== 'Campaign') {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'الحملة غير صحيحة أو ليست من نوع حملة' : 'Invalid or non-campaign category',
+                ], 404);
+            }
+
+            // نحافظ على الموجود ونضيف الجدد
+            $syncData = [];
+            foreach ($request->beneficiary_ids as $id) {
+                $syncData[$id] = ['admin_id' => $admin->id];
+            }
+            $campaign->beneficiaries()->syncWithoutDetaching($syncData);
 
             return response()->json([
-                'message' => 'Beneficiaries added successfully',
+                'message' => $locale === 'ar' ? 'تمت إضافة المستفيدين بنجاح' : 'Beneficiaries added successfully',
                 'status' => 200,
-                'data' => '',
+                'data' => ''
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['message' => 'Campaign not found', 'status' => 404], 404);
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة' : 'Campaign not found',
+                'status' => 404
+            ], 404);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Error adding beneficiaries',
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إضافة المستفيدين' : 'Error adding beneficiaries',
                 'error' => $e->getMessage(),
-                'status' => 500,
+                'status' => 500
             ], 500);
         }
     }
 
+
     public function removeBeneficiaryFromCampaign($campaignId, $beneficiaryId)
     {
-        $campaign = Campaign::find($campaignId);
+        $locale = app()->getLocale();
 
-        if (!$campaign) {
-            return response()->json(['message' => 'Campaign not found'], 404);
+        $campaign = Campaign::with('category')->find($campaignId);
+
+        if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة أو غير صالحة' : 'Campaign not found or invalid',
+                'status' => 404
+            ], 404);
         }
 
         $campaign->beneficiaries()->detach($beneficiaryId);
 
         return response()->json([
-            'message' => 'Beneficiary removed from campaign',
+            'message' => $locale === 'ar' ? 'تمت إزالة المستفيد من الحملة بنجاح' : 'Beneficiary removed from campaign',
             'status' => 200
         ]);
     }
-    public function getCampaignWithBeneficiaries($campaignId)
+
+    public function getCampaignBeneficiaries($campaignId)
     {
         $locale = app()->getLocale();
-        $titleField = "title_{$locale}";
-        $descField = "description_{$locale}";
 
-        $campaign = Campaign::select(
-            'id',
-            'category_id',
-            "{$titleField} as title",
-            "{$descField} as description",
-            'image',
-            'goal_amount',
-            'collected_amount',
-            'start_date',
-            'end_date',
-            'status'
-        )
-            ->with(['beneficiaries']) // جيب المستفيدين مع الحملة
-            ->find($campaignId);
-
-        if (!$campaign) {
+        $admin = auth('admin')->user();
+        if (!$admin) {
             return response()->json([
-                'message' => 'Campaign not found',
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized'
+            ], 401);
+        }
+
+        $campaign = Campaign::with(['beneficiaries', 'category'])->find($campaignId);
+
+        if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة أو غير صالحة' : 'Campaign not found or invalid',
                 'status' => 404
             ], 404);
         }
 
         return response()->json([
-            'message' => 'Campaign and beneficiaries fetched successfully',
-            'data' => $campaign,
+            'message' => $locale === 'ar' ? 'تم جلب المستفيدين بنجاح' : 'Beneficiaries fetched successfully',
+            'data' => $campaign->beneficiaries,
             'status' => 200
         ]);
     }
+
 }

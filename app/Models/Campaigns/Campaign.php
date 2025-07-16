@@ -18,15 +18,16 @@ class Campaign extends Model
         'description_en', 'description_ar',
         'status', 'goal_amount', 'collected_amount',
         'start_date', 'end_date', 'completed_at',
+        'category_id'
     ];
     protected static function booted()
     {
         static::saving(function ($campaign) {
             if (
                 $campaign->collected_amount >= $campaign->goal_amount &&
-                $campaign->status !== \App\Enums\CampaignStatus::Complete
+                $campaign->status !== CampaignStatus::Complete
             ) {
-                $campaign->status = \App\Enums\CampaignStatus::Complete;
+                $campaign->status = CampaignStatus::Complete;
                 $campaign->completed_at = now();
             }
         });
@@ -42,7 +43,8 @@ class Campaign extends Model
     public function getStatusLabelAttribute()
     {
         $locale = app()->getLocale();
-        return CampaignStatus::from($this->status)->label($locale);
+        // $this->status هنا هو Enum فعليًا بفضل $casts
+        return $this->status->label($locale);
     }
 
     protected $casts = [

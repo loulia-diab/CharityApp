@@ -1,0 +1,12 @@
+* [33m0ceb4ae[m[33m ([m[1;32mmain[m[33m)[m added change on campaign coding, add category seeding
+* [33mdaed34e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mback_end_complete[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/back_end_complete[m[33m, [m[1;31morigin/HEAD[m[33m)[m added recurrence type as enum for plan
+* [33m64e52c4[m added recurrence type as enum for plan
+* [33m29b49fa[m added category,campaign logic
+* [33m55a259e[m add twilio service
+* [33mfc63a69[m reset password for admin
+* [33m3d5e3c7[m user/admin/lang/volunteer
+* [33m119704e[m user/admin/lang/volunteer
+* [33m268502a[m user/admin/lang/volunteer
+* [33m81e0c43[m second commit
+* [33me5b7324[m first commit
+* [33mc484457[m[33m ([m[1;31morigin/flutter-frontend-app[m[33m)[m  initial app work

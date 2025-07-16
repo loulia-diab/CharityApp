@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+
+
         Schema::create('sponsorships', function (Blueprint $table) {
             $table->id();
             $table->foreignId('campaign_id')

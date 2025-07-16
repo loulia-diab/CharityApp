@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->longText('description_en');
             $table->longText('description_ar');
-            $table->enum('status', ['pending', 'active', 'complete'])->default('pending');
+            $table->string('status');
             $table->double('goal_amount')->default(0);
             $table->double('collected_amount')->default(0);
             $table->date('start_date');

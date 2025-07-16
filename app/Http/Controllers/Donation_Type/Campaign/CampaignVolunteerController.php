@@ -10,6 +10,8 @@ class CampaignVolunteerController extends Controller
 {
     public function addVolunteersToCampaign(Request $request, $campaignId)
     {
+        $locale = app()->getLocale();
+
         $request->validate([
             'volunteer_ids' => 'required|array',
             'volunteer_ids.*' => 'exists:volunteers,id',
@@ -17,12 +19,16 @@ class CampaignVolunteerController extends Controller
 
         $admin = auth('admin')->user();
         if (!$admin) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized',
+            ], 401);
         }
 
-        $campaign = Campaign::find($campaignId);
-        if (!$campaign) {
-            return response()->json(['message' => 'Campaign not found'], 404);
+        $campaign = Campaign::with('category')->find($campaignId);
+        if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة أو ليست من نوع حملة' : 'Campaign not found or not of type Campaign',
+            ], 404);
         }
 
         try {
@@ -31,46 +37,69 @@ class CampaignVolunteerController extends Controller
             }
 
             return response()->json([
-                'message' => 'Volunteers added successfully',
+                'message' => $locale === 'ar' ? 'تمت إضافة المتطوعين بنجاح' : 'Volunteers added successfully',
                 'status' => 200,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Error adding volunteers',
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إضافة المتطوعين' : 'Error adding volunteers',
                 'error' => $e->getMessage(),
                 'status' => 500,
             ], 500);
         }
     }
 
-    public function getCampaignWithVolunteers($campaignId)
-    {
-        $campaign = Campaign::with('volunteers')->find($campaignId);
 
-        if (!$campaign) {
-            return response()->json(['message' => 'Campaign not found'], 404);
+    public function getCampaignVolunteers($campaignId)
+    {
+        $locale = app()->getLocale();
+
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized',
+            ], 401);
+        }
+
+        $campaign = Campaign::with('volunteers', 'category')->find($campaignId);
+        if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة أو ليست من نوع حملة' : 'Campaign not found or not of type Campaign',
+            ], 404);
         }
 
         return response()->json([
-            'message' => 'Volunteers fetched successfully',
+            'message' => $locale === 'ar' ? 'تم جلب المتطوعين بنجاح' : 'Volunteers fetched successfully',
             'data' => $campaign->volunteers,
             'status' => 200,
         ]);
     }
 
+
     public function removeVolunteerFromCampaign($campaignId, $volunteerId)
     {
-        $campaign = Campaign::find($campaignId);
+        $locale = app()->getLocale();
 
-        if (!$campaign) {
-            return response()->json(['message' => 'Campaign not found'], 404);
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized',
+            ], 401);
+        }
+
+        $campaign = Campaign::with('category')->find($campaignId);
+        if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة أو ليست من نوع حملة' : 'Campaign not found or not of type Campaign',
+            ], 404);
         }
 
         $campaign->volunteers()->detach($volunteerId);
 
         return response()->json([
-            'message' => 'Volunteer removed successfully',
+            'message' => $locale === 'ar' ? 'تمت إزالة المتطوع بنجاح' : 'Volunteer removed successfully',
             'status' => 200,
         ]);
     }
+
 }

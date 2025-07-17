@@ -11,22 +11,15 @@ class CategoryController extends Controller
     public function getAllCategories()
     {
         $locale = app()->getLocale(); // 'ar' أو 'en'
-        $user = null;
-        $admin = null;
-        if (auth()->guard('admin')->check()) {
-            $admin = auth()->guard('admin')->user();
-        } elseif (auth()->guard('api')->check()) {
-            $user = auth()->guard('api')->user();
-        } else {
-            return response()->json(['message' => ' Unauthorized'], 401);
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
         $categories = Category::select(
             'id',
-            "name_category_{$locale} as name",
-            'image_category as image',
-            'created_at'
+            "name_category_{$locale}",
+            'main_category'
         )->get();
-
         return response()->json([
             'message' => 'Categories retrieved successfully',
             'data' => $categories
@@ -36,19 +29,13 @@ class CategoryController extends Controller
     public function getCategoryById($id)
     {
         $locale = app()->getLocale(); // 'ar' أو 'en'
-        $user = null;
-        $admin = null;
-        if (auth()->guard('admin')->check()) {
-            $admin = auth()->guard('admin')->user();
-        } elseif (auth()->guard('api')->check()) {
-            $user = auth()->guard('api')->user();
-        } else {
-            return response()->json(['message' => ' Unauthorized'], 401);
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
         $category = Category::select(
             'id',
-            "name_category_{$locale} as name",
-            'image_category as image',
+            "name_category_{$locale}",
             'created_at'
         )->find($id);
 
@@ -64,7 +51,6 @@ class CategoryController extends Controller
         ]);
     }
 
-
     public function addCategory(Request $request)
     {
         $admin = auth('admin')->user();
@@ -72,17 +58,18 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $locale = app()->getLocale();
-        $nameField = "name_category_{$locale}";
-
         $validated = $request->validate([
-            $nameField => 'required|string|max:255',
+            'name_category_ar' => 'required|string|max:255',
+            'name_category_en' => 'required|string|max:255',
+            'main_category' => 'required|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         try {
             $categoryData = [
-                $nameField => $validated[$nameField],
+                'name_category_ar' => $validated['name_category_ar'],
+                'name_category_en' => $validated['name_category_en'],
+                'main_category' => $validated['main_category'],
                 'image_category' => null,
             ];
 
@@ -94,13 +81,13 @@ class CategoryController extends Controller
             $category = Category::create($categoryData);
 
             return response()->json([
-                'message' => $locale === 'ar' ? 'تمت إضافة التصنيف بنجاح' : 'Category added successfully',
+                'message' => 'تمت إضافة التصنيف بنجاح',
                 'data' => $category
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
-                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إضافة التصنيف' : 'Error adding category',
+                'message' => 'حدث خطأ أثناء إضافة التصنيف',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -112,11 +99,10 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $locale = app()->getLocale();
-        $nameField = "name_category_{$locale}";
-
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name_category_ar' => 'nullable|string|max:255',
+            'name_category_en' => 'nullable|string|max:255',
+            'main_category' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
@@ -125,24 +111,51 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Category not found'], 404);
         }
 
-        $category->$nameField = $validated['name'];
+        if (isset($validated['name_category_ar'])) {
+            $category->name_category_ar = $validated['name_category_ar'];
+        }
+        if (isset($validated['name_category_en'])) {
+            $category->name_category_en = $validated['name_category_en'];
+        }
+        if (isset($validated['main_category'])) {
+            $category->main_category = $validated['main_category'];
+        }
+
 
         if ($request->hasFile('image')) {
-            // حذف الصورة القديمة إذا موجودة
-            if ($category->image_category && \Storage::disk('public')->exists($category->image_category)) {
-                \Storage::disk('public')->delete($category->image_category);
-            }
+            $newImage = $request->file('image');
+            $newImageHash = md5_file($newImage->getRealPath());
 
-            // رفع الصورة الجديدة
-            $path = $request->file('image')->store('category_images', 'public');
-            $category->image_category = $path;
+            $currentImagePath = $category->image_category
+                ? storage_path('app/public/' . $category->image_category)
+                : null;
+
+            $currentImageHash = ($currentImagePath && file_exists($currentImagePath))
+                ? md5_file($currentImagePath)
+                : null;
+
+            if ($newImageHash !== $currentImageHash) {
+                if ($category->image_category && \Storage::disk('public')->exists($category->image_category)) {
+                    \Storage::disk('public')->delete($category->image_category);
+                }
+
+                $extension = $newImage->getClientOriginalExtension();
+                $filename = "category_{$category->id}." . $extension;
+                $path = $newImage->storeAs('category_images', $filename, 'public');
+                $category->image_category = $path;
+            }
         }
 
         $category->save();
 
         return response()->json([
             'message' => 'Category updated successfully',
-            'data' => $category
+            'data' => [
+                'name_category_ar' => $category->name_category_ar,
+                'name_category_en' => $category->name_category_en,
+                'main_category' => $category->main_category,
+                'image' => $category->image_category,
+            ]
         ]);
     }
 
@@ -168,6 +181,39 @@ class CategoryController extends Controller
         ]);
     }
 
+    public function getAllCategoriesForUser()
+    {
+        $locale = app()->getLocale(); // 'ar' أو 'en'
+        $categories = Category::select(
+            'id',
+            "name_category_{$locale} as name",
+            'main_category'
 
+        )->get();
 
+        return response()->json([
+            'message' => 'Categories retrieved successfully',
+            'data' => $categories
+        ]);
+    }
+    public function getCategoryByIdForUser($id)
+    {
+        $locale = app()->getLocale(); // 'ar' أو 'en'
+        $category = Category::select(
+            'id',
+            "name_category_{$locale} as name",
+            'main_category'
+        )->find($id);
+
+        if (!$category) {
+            return response()->json([
+                'message' => 'Category not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Category retrieved successfully',
+            'data' => $category
+        ]);
+    }
 }

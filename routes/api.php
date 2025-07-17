@@ -64,7 +64,7 @@ Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);
     Route::get('/getAll',[CategoryController::class,'getAllCategories']);
     Route::get('/get/{categoryId}',[CategoryController::class,'getCategoryById']);
-    Route::delete('delete/{categoryId}',[CategoryController::class,'deleteCategory']);
+    Route::delete('/delete/{categoryId}',[CategoryController::class,'deleteCategory']);
     Route::post('/update/{categoryId}',[CategoryController::class,'updateCategory']);
 });
 
@@ -105,7 +105,7 @@ Route::prefix('humanCase')->group(function () {
     Route::get('/get/{Id}', [HumanCaseController::class, 'getHumanCaseDetails']);
     Route::get('/category/{categoryId}', [HumanCaseController::class, 'getHumanCasesByCategory']);
     Route::post('/update/{Id}', [HumanCaseController::class, 'updateHumanCase']);
-    Route::get('/byStatus', [HumanCaseController::class, 'getHumanCasesByStatus']);
+    Route::post('/activeEmergency/{Id}', [HumanCaseController::class, 'activateEmergency']);
     Route::get('/emergency', [HumanCaseController::class, 'getEmergencyHumanCases']);
     Route::post('/activate/{Id}', [HumanCaseController::class, 'activateHumanCase']);
     Route::post('/archive/{Id}', [HumanCaseController::class, 'archiveHumanCase']);
@@ -113,11 +113,15 @@ Route::prefix('humanCase')->group(function () {
 });
 
 });
+Route::prefix('category')->group(function () {
+    Route::get('/getAll/for/user', [CategoryController::class, 'getAllCategoriesForUser']);
+    Route::get('/{categoryId}/for/user', [CategoryController::class, 'getCategoryByIdForUser']);
+});
 Route::prefix('campaigns')->group(function () {
     Route::get('/getAll/for/user', [CampaignController::class, 'getAllVisibleCampaignsForUser']);
     Route::get('/get/{Id}/for/user', [CampaignController::class, 'getVisibleCampaignByIdForUser']);
     Route::get('/category/{categoryId}/for/user', [CampaignController::class, 'getVisibleCampaignsByCategoryForUser']);
-    Route::get('/archivedCampaigns/for/user', [CampaignController::class, 'getVisibleCampaignsByCategoryForUser']);
+    Route::get('/archived/for/user', [CampaignController::class, 'getVisibleArchivedCampaigns']);
 });
 
 Route::prefix('humanCases')->group(function () {
@@ -126,5 +130,5 @@ Route::prefix('humanCases')->group(function () {
     Route::get('/category/{categoryId}/for/user', [HumanCaseController::class, 'getVisibleHumanCasesByCategoryForUser']);
     Route::get('/getAll/emergency/for/user', [HumanCaseController::class, 'getAllVisibleEmergencyHumanCasesForUser']);
     Route::get('/get/{Id}/emergency/for/user', [HumanCaseController::class, 'getVisibleEmergencyHumanCaseByIdForUser']);
-    Route::get('/archivedVisibleHumanCases', [HumanCaseController::class, 'getArchivedHumanCases']);
+    Route::get('/archived/for/user', [HumanCaseController::class, 'getVisibleArchivedHumanCases']);
 });

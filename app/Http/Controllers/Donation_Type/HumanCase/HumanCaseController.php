@@ -824,18 +824,25 @@ class HumanCaseController extends Controller
 
     // User ///////////////////////////// uuuuuuuuuuuuuuuuuuuuuu
 
-    public function getAllVisibleHumanCasesForUser()
+    public function getAllVisibleHumanCasesForUser($mainCategory)
     {
+        $locale = app()->getLocale();
+
+        if ($mainCategory !== 'HumanCase') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'نوع التصنيف غير صالح' : 'Invalid main category type',
+                'status' => 400,
+            ], 400);
+        }
 
         try {
-            $locale = app()->getLocale();
             $titleField = "title_{$locale}";
             $descField = "description_{$locale}";
 
-            $humanCases = \App\Models\HumanCase::with(['campaign' => function ($query) use ($titleField, $descField) {
+            $humanCases = \App\Models\HumanCase::with(['campaign' => function ($query) use ($titleField, $descField, $mainCategory) {
                 $query->where('status', \App\Enums\CampaignStatus::Active)
-                    ->whereHas('category', function ($q) {
-                        $q->where('main_category', 'HumanCase');
+                    ->whereHas('category', function ($q) use ($mainCategory) {
+                        $q->where('main_category', $mainCategory);
                     })
                     ->select(
                         'id',
@@ -849,9 +856,7 @@ class HumanCaseController extends Controller
                         'end_date'
                     );
             }])->get()
-                ->filter(function ($humanCase) {
-                    return $humanCase->campaign !== null;
-                })
+                ->filter(fn($humanCase) => $humanCase->campaign !== null)
                 ->map(function ($humanCase) {
                     $campaign = $humanCase->campaign;
                     return [
@@ -873,7 +878,6 @@ class HumanCaseController extends Controller
                 'data' => $humanCases,
                 'status' => 200
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحالات' : 'Error fetching human cases',
@@ -883,18 +887,18 @@ class HumanCaseController extends Controller
         }
     }
 
-    public function getVisibleHumanCasesByCategoryForUser(Request $request, $categoryId)
+    public function getVisibleHumanCasesByCategoryForUser($mainCategory, $categoryId)
     {
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
             $descField = "description_{$locale}";
 
-            $humanCases = \App\Models\HumanCase::with(['campaign' => function ($query) use ($categoryId, $titleField, $descField) {
+            $humanCases = \App\Models\HumanCase::with(['campaign' => function ($query) use ($mainCategory, $categoryId, $titleField, $descField) {
                 $query->where('status', \App\Enums\CampaignStatus::Active)
                     ->where('category_id', $categoryId)
-                    ->whereHas('category', function ($q) {
-                        $q->where('main_category', 'HumanCase');
+                    ->whereHas('category', function ($q) use ($mainCategory) {
+                        $q->where('main_category', $mainCategory);
                     })
                     ->select(
                         'id',
@@ -909,9 +913,7 @@ class HumanCaseController extends Controller
                     );
             }])
                 ->get()
-                ->filter(function ($humanCase) {
-                    return $humanCase->campaign !== null;
-                })
+                ->filter(fn($humanCase) => $humanCase->campaign !== null)
                 ->map(function ($humanCase) {
                     $campaign = $humanCase->campaign;
                     return [
@@ -922,7 +924,6 @@ class HumanCaseController extends Controller
                         'image' => $campaign->image,
                         'goal_amount' => $campaign->goal_amount,
                         'collected_amount' => $campaign->collected_amount,
-                        'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
                     ];
                 });
 
@@ -941,17 +942,18 @@ class HumanCaseController extends Controller
         }
     }
 
-    public function getVisibleHumanCaseByIdForUser($id)
+    public function getVisibleHumanCaseByIdForUser($mainCategory, $id)
     {
-
-
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
             $descField = "description_{$locale}";
 
-            $humanCase = \App\Models\HumanCase::with(['campaign' => function ($query) use ($titleField, $descField) {
+            $humanCase = \App\Models\HumanCase::with(['campaign' => function ($query) use ($mainCategory, $titleField, $descField) {
                 $query->where('status', \App\Enums\CampaignStatus::Active)
+                    ->whereHas('category', function ($q) use ($mainCategory) {
+                        $q->where('main_category', $mainCategory);
+                    })
                     ->select(
                         'id',
                         'category_id',
@@ -997,18 +999,17 @@ class HumanCaseController extends Controller
         }
     }
 
-    public function getVisibleEmergencyHumanCaseByIdForUser($id)
+    public function getVisibleEmergencyHumanCaseByIdForUser($mainCategory, $id)
     {
-
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
             $descField = "description_{$locale}";
 
-            $humanCase = \App\Models\HumanCase::with(['campaign' => function ($query) use ($titleField, $descField) {
+            $humanCase = \App\Models\HumanCase::with(['campaign' => function ($query) use ($mainCategory, $titleField, $descField) {
                 $query->where('status', \App\Enums\CampaignStatus::Active)
-                    ->whereHas('category', function ($q) {
-                        $q->where('main_category', 'HumanCase');
+                    ->whereHas('category', function ($q) use ($mainCategory) {
+                        $q->where('main_category', $mainCategory);
                     })
                     ->select(
                         'id',
@@ -1017,10 +1018,10 @@ class HumanCaseController extends Controller
                         "{$descField} as description",
                         'image',
                         'goal_amount',
-                        'collected_amount',
-
+                        'collected_amount'
                     );
-            }])->with('beneficiary')
+            }])
+                ->with('beneficiary')
                 ->where('is_emergency', true)
                 ->find($id);
 
@@ -1056,18 +1057,17 @@ class HumanCaseController extends Controller
         }
     }
 
-    public function getAllVisibleEmergencyHumanCasesForUser()
+    public function getAllVisibleEmergencyHumanCasesForUser($mainCategory)
     {
+        $locale = app()->getLocale();
+        $titleField = "title_{$locale}";
+        $descField = "description_{$locale}";
 
         try {
-            $locale = app()->getLocale();
-            $titleField = "title_{$locale}";
-            $descField = "description_{$locale}";
-
-            $humanCases = HumanCase::with(['campaign' => function ($query) use ($titleField, $descField) {
+            $humanCases = HumanCase::with(['campaign' => function ($query) use ($mainCategory, $titleField, $descField) {
                 $query->where('status', CampaignStatus::Active)
-                    ->whereHas('category', function ($q) {
-                        $q->where('main_category', 'HumanCase');
+                    ->whereHas('category', function ($q) use ($mainCategory) {
+                        $q->where('main_category', $mainCategory);
                     })
                     ->select(
                         'id',
@@ -1081,9 +1081,7 @@ class HumanCaseController extends Controller
             }])
                 ->where('is_emergency', true)
                 ->get()
-                ->filter(function ($humanCase) {
-                    return $humanCase->campaign !== null;
-                })
+                ->filter(fn($humanCase) => $humanCase->campaign !== null)
                 ->map(function ($humanCase) {
                     $campaign = $humanCase->campaign;
                     return [
@@ -1095,7 +1093,6 @@ class HumanCaseController extends Controller
                         'goal_amount' => $campaign->goal_amount,
                         'collected_amount' => $campaign->collected_amount,
                         'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
-
                     ];
                 });
 
@@ -1113,15 +1110,14 @@ class HumanCaseController extends Controller
         }
     }
 
-
-    public function getVisibleArchivedHumanCases(Request $request)
+    public function getVisibleArchivedHumanCases($mainCategory = 'HumanCase')
     {
         $locale = app()->getLocale();
         $titleField = "title_{$locale}";
         $descField = "description_{$locale}";
 
         try {
-            $humanCases = HumanCase::with(['campaign' => function ($query) use ($titleField, $descField) {
+            $humanCases = HumanCase::with(['campaign' => function ($query) use ($mainCategory, $titleField, $descField) {
                 $query->select(
                     'id',
                     'category_id',
@@ -1133,14 +1129,14 @@ class HumanCaseController extends Controller
                     'image',
                     "{$titleField} as title",
                     "{$descField} as description"
-                )->whereHas('category', function ($q) {
-                    $q->where('main_category', 'HumanCase');
+                )->whereHas('category', function ($q) use ($mainCategory) {
+                    $q->where('main_category', $mainCategory);
                 });
             }])
-                ->whereHas('campaign', function ($query) {
+                ->whereHas('campaign', function ($query) use ($mainCategory) {
                     $query->where('status', \App\Enums\CampaignStatus::Archived)
-                        ->whereHas('category', function ($q) {
-                            $q->where('main_category', 'HumanCase');
+                        ->whereHas('category', function ($q) use ($mainCategory) {
+                            $q->where('main_category', $mainCategory);
                         });
                 })
                 ->latest()
@@ -1176,5 +1172,6 @@ class HumanCaseController extends Controller
             ]);
         }
     }
+
 
 }

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+
 use Illuminate\Database\Seeder;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -28,7 +29,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BeneficiaryRequestSeeder::class,
             BeneficiarySeeder::class, // بعده لربط المستفيدين
-            HumanCaseSeeder::class,
         ]);
+        $this->call(HumanCaseSeeder::class);
     }
 }

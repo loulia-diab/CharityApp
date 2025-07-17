@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\HumanCase;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -12,15 +13,14 @@ class HumanCaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $humanCases =[
+        $beneficiaries = \App\Models\Beneficiary::all();
 
-        ];
-        foreach ($humanCases as $humanCase) {
-            DB::table('human_cases')->updateOrInsert(
-               [
-
-               ]
-            );
+        foreach ($beneficiaries as $beneficiary) {
+            HumanCase::create([
+                'beneficiary_id' => $beneficiary->id,
+                'campaign_id' => null,
+                'is_emergency' => false, // مبدئيًا كلها غير طارئة
+            ]);
         }
     }
 }

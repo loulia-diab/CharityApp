@@ -25,5 +25,10 @@ class DatabaseSeeder extends Seeder
         $this->call(VolunteeringTypeSeeder::class);
         $this->call(CategorySeeder::class);
         $this->call(CampaignSeeder::class);
+        $this->call([
+            BeneficiaryRequestSeeder::class,
+            BeneficiarySeeder::class, // بعده لربط المستفيدين
+            HumanCaseSeeder::class,
+        ]);
     }
 }

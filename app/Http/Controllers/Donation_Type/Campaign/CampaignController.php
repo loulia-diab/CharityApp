@@ -6,6 +6,7 @@ use App\Enums\CampaignStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Campaigns\Campaign;
 use App\Models\Campaigns\CampaignBeneficiary;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
@@ -25,10 +26,6 @@ class CampaignController extends Controller
             ], 401);
         }
 
-        $locale = app()->getLocale();
-
-
-        // التحقق من صحة البيانات المدخلة
         $validated = $request->validate([
             'title_en' => 'required|string|max:255',
             'title_ar' => 'required|string|max:255',
@@ -42,32 +39,35 @@ class CampaignController extends Controller
             ],
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'goal_amount' => 'required|numeric|min:0',
-            'collected_amount' => 'nullable|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'status' => ['nullable', Rule::in(CampaignStatus::values())],
         ]);
 
-        // معالجة رفع الصورة وتخزينها (إن وجدت)
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('campaign_images', 'public');
-        }
-
         try {
+            // أول شي ننشئ الحملة بدون صورة
             $campaign = Campaign::create([
                 'title_en' => $validated['title_en'],
                 'title_ar' => $validated['title_ar'],
                 'description_en' => $validated['description_en'],
                 'description_ar' => $validated['description_ar'],
                 'category_id' => $validated['category_id'],
-                'image' => $imagePath,
                 'goal_amount' => $validated['goal_amount'],
-                'collected_amount' => $validated['collected_amount'] ?? 0,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
                 'status' => CampaignStatus::tryFrom($validated['status'] ?? 'pending'),
             ]);
+
+            // إذا في صورة نرفعها بعد ما نعرف الـ ID
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $ext = $image->getClientOriginalExtension();
+                $imageName = 'campaign_' . $campaign->id . '.' . $ext;
+                $path = $image->storeAs('campaign_images', $imageName, 'public');
+
+                $campaign->image = $path;
+                $campaign->save();
+            }
 
             return response()->json([
                 'message' => 'Campaign added successfully',
@@ -75,7 +75,7 @@ class CampaignController extends Controller
                 'status' => 201
             ], 201);
 
-        } catch (\Exception $e) {
+        }catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error adding campaign',
                 'error' => $e->getMessage(),
@@ -115,7 +115,8 @@ class CampaignController extends Controller
             'collected_amount',
             'start_date',
             'end_date',
-            'status'
+            'status',
+            'created_at'
         )->get();
 
         if ($campaigns->isEmpty()) {
@@ -127,7 +128,8 @@ class CampaignController extends Controller
 
         // إضافة تسمية الحالة
         $campaigns->transform(function ($campaign) use ($locale) {
-            $campaign->status_label = $campaign->status->label($locale); // ✅ بدون from()
+            $campaign->status_label = $campaign->status->label($locale);
+           // $campaign->created_date = $campaign->created_at->format('Y-m-d');
             return $campaign;
         });
 
@@ -153,7 +155,7 @@ class CampaignController extends Controller
         $campaign = Campaign::whereHas('category', function ($q) {
             $q->where('main_category', 'Campaign');
         })
-            ->where('status', '!=', CampaignStatus::Archived->value) // ✅ شرط استثناء المؤرشفة
+            ->where('status', '!=', CampaignStatus::Archived->value) //  شرط استثناء المؤرشفة
             ->select(
                 'id',
                 'category_id',
@@ -164,7 +166,8 @@ class CampaignController extends Controller
                 'collected_amount',
                 'start_date',
                 'end_date',
-                'status'
+                'status',
+                'created_at'
             )
             ->withCount('beneficiaries')
             ->find($id);
@@ -177,7 +180,7 @@ class CampaignController extends Controller
             ], 404);
         }
 
-        $campaign->status_label = $campaign->status->label($locale); // ✅ استخدام آمن بدون from()
+        $campaign->status_label = $campaign->status->label($locale);
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم جلب تفاصيل الحملة بنجاح' : 'Campaign details fetched successfully',
@@ -185,7 +188,7 @@ class CampaignController extends Controller
             'status' => 200
         ]);
     }
-    public function archiveCampaign(Request $request, $id)
+    public function archiveCampaign($id)
     {
         $admin = auth('admin')->user();
         if (!$admin) {
@@ -196,17 +199,15 @@ class CampaignController extends Controller
             $campaign = Campaign::whereHas('category', function($q) {
                 $q->where('main_category', 'Campaign');
             })->findOrFail($id);
-
-            // السماح فقط إذا الحالة Complete
-            if ($campaign->status !== \App\Enums\CampaignStatus::Complete) {
+            if (!in_array($campaign->status, [
+                \App\Enums\CampaignStatus::Complete,
+            ])) {
                 return response()->json([
                     'message' => 'Cannot archive a campaign unless it is complete',
                     'status' => 400
                 ], 400);
             }
-
-
-            $campaign->status = \App\Enums\CampaignStatus::Archived;
+            $campaign->status = CampaignStatus::Archived->value;
             $campaign->save();
 
             return response()->json([
@@ -214,7 +215,14 @@ class CampaignController extends Controller
                 'data' => $campaign,
                 'status' => 200
             ]);
-        } catch (\Exception $e) {
+        }
+        catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Campaign not found',
+                'status' => 404
+            ], 404);
+        }
+        catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error archiving campaign',
                 'error' => $e->getMessage(),
@@ -253,7 +261,13 @@ class CampaignController extends Controller
                 'data' => $campaign,
                 'status' => 200
             ]);
-        } catch (\Exception $e) {
+        }
+        catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' =>  'Campaign not found',
+                'status' => 404
+            ], 404);
+        }catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error activating campaign',
                 'error' => $e->getMessage(),
@@ -268,15 +282,14 @@ class CampaignController extends Controller
             return response()->json(['message' => 'Unauthorized', 'error' => '', 'status' => 401], 401);
         }
 
-        $locale = app()->getLocale();
-        $titleField = "title_{$locale}";
-        $descField = "description_{$locale}";
-
         $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'description' => 'required|string',
+            'title_en' => 'nullable|string|max:255',
+            'title_ar' => 'nullable|string|max:255',
+            'description_en' => 'nullable|string',
+            'description_ar' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'goal_amount' => 'nullable|numeric|min:0',
+            'collected_amount' => 'prohibited', //  لا يسمح بتعديل collected_amount
         ]);
 
         $campaign = Campaign::whereHas('category', function ($q) {
@@ -287,6 +300,15 @@ class CampaignController extends Controller
             return response()->json(['message' => 'Campaign not found or invalid category', 'error' => '', 'status' => 404], 404);
         }
 
+
+        if (in_array($campaign->status, [CampaignStatus::Archived, CampaignStatus::Complete])) {
+            return response()->json([
+                'message' => 'Cannot update an archived or completed campaign.',
+                'error' => '',
+                'status' => 403
+            ], 403);
+        }
+
         if (isset($validated['goal_amount']) && $validated['goal_amount'] < $campaign->collected_amount) {
             return response()->json([
                 'message' => 'Goal amount cannot be less than the collected amount.',
@@ -295,32 +317,31 @@ class CampaignController extends Controller
             ], 422);
         }
 
-        if (isset($validated['title'])) {
-            $campaign->$titleField = $validated['title'];
-        }
+        // تحديث البيانات
+        $campaign->fill([
+            'title_en' => $validated['title_en'] ?? $campaign->title_en,
+            'title_ar' => $validated['title_ar'] ?? $campaign->title_ar,
+            'description_en' => $validated['description_en'] ?? $campaign->description_en,
+            'description_ar' => $validated['description_ar'] ?? $campaign->description_ar,
+            'goal_amount' => $validated['goal_amount'] ?? $campaign->goal_amount,
+        ]);
 
-        $campaign->$descField = $validated['description'];
-
+        // إذا في صورة جديدة
         if ($request->hasFile('image')) {
-            // حذف الصورة القديمة إذا كانت موجودة
+            // حذف القديمة
             if ($campaign->image && \Storage::disk('public')->exists($campaign->image)) {
                 \Storage::disk('public')->delete($campaign->image);
             }
 
-            // رفع الصورة الجديدة
-            $imageFile = $request->file('image');
-            $path = $imageFile->store('campaign_images', 'public');
+            $image = $request->file('image');
+            $ext = $image->getClientOriginalExtension();
+            $imageName = 'campaign_' . $campaign->id . '.' . $ext;
+            $path = $image->storeAs('campaign_images', $imageName, 'public');
+
             $campaign->image = $path;
         }
 
-        if (isset($validated['goal_amount'])) {
-            $campaign->goal_amount = $validated['goal_amount'];
-        }
-
         $campaign->save();
-
-        // إضافة رابط كامل للصورة
-        $campaign->image_url = $campaign->image ? asset('storage/' . $campaign->image) : null;
 
         return response()->json([
             'message' => 'Campaign updated successfully',
@@ -328,6 +349,8 @@ class CampaignController extends Controller
             'status' => 200
         ]);
     }
+
+
     public function getCampaignsByStatus(Request $request)
     {
         $admin = auth('admin')->user();
@@ -408,7 +431,8 @@ class CampaignController extends Controller
                     'collected_amount',
                     'start_date',
                     'end_date',
-                    'status'
+                    'status',
+                    'created_at'
                 )
                 ->get();
 
@@ -438,7 +462,6 @@ class CampaignController extends Controller
         if (!$admin) {
             return response()->json(['message' => 'Unauthorized', 'error' => '', 'status' => 401], 401);
         }
-
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
@@ -446,7 +469,7 @@ class CampaignController extends Controller
             $campaigns = Campaign::whereHas('category', function ($q) {
                 $q->where('main_category', 'Campaign');
             })
-                ->orderBy('start_date', 'desc') // ترتيب حسب تاريخ الإضافة (الأحدث أولاً)
+                ->orderBy('created_at', 'desc') // ترتيب حسب تاريخ الإضافة (الأحدث أولاً)
                 ->select(
                     'id',
                     "$titleField as title",
@@ -456,7 +479,8 @@ class CampaignController extends Controller
                     'collected_amount',
                     'start_date',
                     'end_date',
-
+                    'status',
+                    'created_at'
                 )
                 ->get()
                 ->map(function ($campaign) {
@@ -464,11 +488,9 @@ class CampaignController extends Controller
                     return $campaign;
                 });
             $campaigns->transform(function ($campaign) use ($locale) {
-                $campaign->status_label = $campaign->status->label($locale);
+                $campaign->status_label = $campaign->status?->label($locale) ?? '';
                 return $campaign;
-
             });
-
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم جلب الحملات حسب تاريخ الإضافة بنجاح' : 'Campaigns fetched by creation date successfully',
                 'data' => $campaigns,
@@ -533,9 +555,9 @@ class CampaignController extends Controller
     }
 
     // user //////////////////////
+
     public function getAllVisibleCampaignsForUser()
     {
-
         try {
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
@@ -551,7 +573,8 @@ class CampaignController extends Controller
                     "$descField as description",
                     'image',
                     'goal_amount',
-                    'collected_amount'
+                    'collected_amount',
+                    'status'
                 )
                 ->get()
                 ->map(function ($campaign) {
@@ -638,6 +661,7 @@ class CampaignController extends Controller
                     'collected_amount',
                     'start_date',
                     'end_date',
+                    'status'
                 )
                 ->first();
 
@@ -690,8 +714,6 @@ class CampaignController extends Controller
                     'end_date' => $campaign->end_date,
                     'status' => $campaign->status,
                     'image' => $campaign->image,
-                    'remaining_amount' => $campaign->remaining_amount,
-                    'status_label' => CampaignStatus::from($campaign->status)->label($locale),
                 ];
             });
 
@@ -709,6 +731,51 @@ class CampaignController extends Controller
         }
     }
 
+    public function getCampaignsByCreationDateForUser(Request $request)
+    {
+
+        try {
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+            $campaigns = Campaign::whereHas('category', function ($q) {
+                $q->where('main_category', 'Campaign');
+            })
+                ->orderBy('created_at', 'desc') // ترتيب حسب تاريخ الإضافة (الأحدث أولاً)
+                ->select(
+                    'id',
+                    "$titleField as title",
+                    "$descField as description",
+                    'image',
+                    'goal_amount',
+                    'collected_amount',
+                    'start_date',
+                    'end_date',
+                    'status',
+                    'created_at'
+                )
+                ->get()
+                ->map(function ($campaign) {
+                    $campaign->remaining_amount = max(0, $campaign->goal_amount - $campaign->collected_amount);
+                    return $campaign;
+                });
+            $campaigns->transform(function ($campaign) use ($locale) {
+                $campaign->status_label = $campaign->status?->label($locale) ?? '';
+                return $campaign;
+            });
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب الحملات حسب تاريخ الإضافة بنجاح' : 'Campaigns fetched by creation date successfully',
+                'data' => $campaigns,
+                'status' => 200
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحملات' : 'Error fetching campaigns',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
 // الإحصائيات
     public function campaignStatistics()
     {

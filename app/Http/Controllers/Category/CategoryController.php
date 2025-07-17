@@ -181,7 +181,34 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function getAllCategoriesForUser()
+    public function getAllCategoriesByMainCategory($main_category)
+    {
+        $allowedMainCategories = ['Campaign', 'HumanCase', 'Sponsorship'];
+
+        if (!in_array($main_category, $allowedMainCategories)) {
+            return response()->json([
+                'message' => 'Invalid main category',
+            ], 422);
+        }
+
+        $locale = app()->getLocale();
+
+        $categories = Category::select(
+            'id',
+            "name_category_{$locale} as name",
+            'main_category'
+        )
+            ->where('main_category', $main_category)
+            ->get();
+
+        return response()->json([
+            'message' => 'Categories retrieved successfully',
+            'data' => $categories
+        ]);
+    }
+
+
+    public function getAllCategoriesForUser2()
     {
         $locale = app()->getLocale(); // 'ar' أو 'en'
         $categories = Category::select(
@@ -196,6 +223,7 @@ class CategoryController extends Controller
             'data' => $categories
         ]);
     }
+
     public function getCategoryByIdForUser($id)
     {
         $locale = app()->getLocale(); // 'ar' أو 'en'

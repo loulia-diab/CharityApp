@@ -5,6 +5,7 @@ namespace App\Enums;
 enum CampaignStatus: string
 {
     case Pending = 'pending';
+
     case Active = 'active';
     case Complete = 'complete';
     case Archived = 'archived';

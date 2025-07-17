@@ -25,7 +25,7 @@ class Campaign extends Model
         static::saving(function ($campaign) {
             if (
                 $campaign->collected_amount >= $campaign->goal_amount &&
-                $campaign->status !== CampaignStatus::Complete
+                $campaign->status === CampaignStatus::Active
             ) {
                 $campaign->status = CampaignStatus::Complete;
                 $campaign->completed_at = now();
@@ -43,9 +43,11 @@ class Campaign extends Model
     public function getStatusLabelAttribute()
     {
         $locale = app()->getLocale();
-        // $this->status هنا هو Enum فعليًا بفضل $casts
-        return $this->status->label($locale);
+
+        // لو status null رح يكسر، فحط حماية:
+        return $this->status?->label($locale) ;
     }
+
 
     protected $casts = [
         'status' => CampaignStatus::class,

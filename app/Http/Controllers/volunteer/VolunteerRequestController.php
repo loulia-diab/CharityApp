@@ -205,40 +205,39 @@ class VolunteerRequestController extends Controller
             'created_at' => $requestData->created_at->toDateTimeString(),
         ];
 
+        if (auth()->guard('admin')->check()) {
+            $requestData->update(['is_read_by_admin' => true]);
+        }
+
         return response()->json(['data' => $data]);
     }
 
-    /*
-    public function filterVolunteerRequests(Request $request)
+    public function getVolunteerRequestsByStatusForAdmin(Request $request)
     {
         $admin = auth()->guard('admin')->user();
-        if (!$admin || !$admin instanceof Admin) {
+        if (!$admin) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
+        $status = $request->query('status'); // قيم: 'accepted', 'rejected', 'pending'
         $locale = app()->getLocale();
         $fallback = $locale === 'ar' ? 'en' : 'ar';
 
-        $statusColumn = 'status_' . $locale;
+        // تحديد الترجمة المقابلة للحالة
+        $statusMap = [
+            'accepted' => ['ar' => 'مقبول', 'en' => 'accepted'],
+            'rejected' => ['ar' => 'مرفوض', 'en' => 'rejected'],
+            'pending' => ['ar' => 'قيد الانتظار', 'en' => 'pending'],
+        ];
 
-        $requests = Volunteer_request::with([
-            'days:id,name_' . $locale, 'days:id,name_' . $fallback,
-            'types:id,name_' . $locale, 'types:id,name_' . $fallback,
-            'user:id,name,email' // لو بدك تفاصيل عن المستخدم
-        ])
-            ->when($request->has('status'), function ($query) use ($request, $statusColumn) {
-                $query->where($statusColumn, $request->status);
-            })
-            ->when($request->has('type_id'), function ($query) use ($request) {
-                $query->whereHas('types', function ($q) use ($request) {
-                    $q->where('volunteering_types.id', $request->type_id);
-                });
-            })
-            ->when($request->has('day_id'), function ($query) use ($request) {
-                $query->whereHas('days', function ($q) use ($request) {
-                    $q->where('days.id', $request->day_id);
-                });
-            })
+        if (!array_key_exists($status, $statusMap)) {
+            return response()->json(['message' => 'Invalid status filter'], 400);
+        }
+
+        $translatedStatus = $statusMap[$status][$locale];
+
+        // جلب الطلبات التي تطابق الحالة
+        $requests = Volunteer_request::where('status_' . $locale, $translatedStatus)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($request) use ($locale, $fallback) {
@@ -246,22 +245,37 @@ class VolunteerRequestController extends Controller
                     'id' => $request->id,
                     'full_name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
                     'status' => $request->{'status_' . $locale} ?? $request->{'status_' . $fallback},
-                    'user' => $request->user?->name,
-                    'types' => $request->types->map(fn($type) => [
-                        'id' => $type->id,
-                        'name' => $type->{'name_' . $locale} ?? $type->{'name_' . $fallback}
-                    ]),
-                    'days' => $request->days->map(fn($day) => [
-                        'id' => $day->id,
-                        'name' => $day->{'name_' . $locale} ?? $day->{'name_' . $fallback}
-                    ]),
                     'created_at' => $request->created_at->toDateTimeString(),
                 ];
             });
 
         return response()->json(['data' => $requests]);
     }
-*/
+
+    public function getUnreadVolunteerRequests()
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale();
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        $requests = Volunteer_request::where('is_read_by_admin', false)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) use ($locale, $fallback) {
+                return [
+                    'id' => $request->id,
+                    'full_name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
+                    'created_at' => $request->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json(['data' => $requests]);
+    }
 
     public function updateVolunteerRequestStatus(Request $request, $id)
     {
@@ -272,54 +286,42 @@ class VolunteerRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|string|in:مقبول,مرفوض,معلق,accepted,rejected,pending',
-            'reason_of_rejection' => 'nullable|string',
-            'lang' => 'required|in:ar,en', // اللغة التي تم بها الإدخال
+            'status' => 'required|in:accepted,rejected',
+            'reason_ar' => 'required_if:status,rejected|string|nullable',
+            'reason_en' => 'required_if:status,rejected|string|nullable',
         ]);
-
-        $statusInput = $validated['status'];
-        $lang = $validated['lang'];
-        $otherLang = $lang === 'ar' ? 'en' : 'ar';
-
-        $statusMap = [
-            'مقبول' => 'accepted',
-            'مرفوض' => 'rejected',
-            'معلق'  => 'pending',
-            'accepted' => 'مقبول',
-            'rejected' => 'مرفوض',
-            'pending'  => 'معلق',
-        ];
-
-        // تحديد الحالتين بكلتا اللغتين
-        $status_ar = $lang === 'ar' ? $statusInput : $statusMap[$statusInput];
-        $status_en = $lang === 'en' ? $statusInput : $statusMap[$statusInput];
 
         $volunteerRequest = Volunteer_request::findOrFail($id);
 
-        $volunteerRequest->status_ar = $status_ar;
-        $volunteerRequest->status_en = $status_en;
-        $volunteerRequest->admin_id = $admin->id;
+        // ترجمة الحالة
+        $statusMap = [
+            'accepted' => ['ar' => 'مقبول', 'en' => 'accepted'],
+            'rejected' => ['ar' => 'مرفوض', 'en' => 'rejected'],
+        ];
 
-        // سبب الرفض يتم تخزينه في لغة واحدة فقط
-        if ($status_ar === 'مرفوض') {
-            $volunteerRequest->{'reason_of_rejection_' . $lang} = $validated['reason_of_rejection'] ?? '';
-            $volunteerRequest->{'reason_of_rejection_' . $otherLang} = null;
-        } else {
-            $volunteerRequest->reason_of_rejection_ar = null;
-            $volunteerRequest->reason_of_rejection_en = null;
+        $updateData = [
+            'status_ar' => $statusMap[$validated['status']]['ar'],
+            'status_en' => $statusMap[$validated['status']]['en'],
+        ];
+
+        // في حال الرفض، خزّن سببي الرفض
+        if ($validated['status'] === 'rejected') {
+            $updateData['reason_of_rejection_ar'] = $validated['reason_ar'];
+            $updateData['reason_of_rejection_en'] = $validated['reason_en'];
         }
 
-        $volunteerRequest->save();
+        $volunteerRequest->update($updateData);
 
-        // إضافة إلى جدول المتطوعين في حال القبول
-        if ($status_ar === 'مقبول' && !$volunteerRequest->volunteer) {
-            Volunteer::create([
-                'user_id' => $volunteerRequest->user_id,
+        // في حال القبول، أضف المتطوع
+        if ($validated['status'] === 'accepted') {
+            Volunteer::firstOrCreate([
                 'volunteer_request_id' => $volunteerRequest->id,
+            ], [
+                'user_id' => $volunteerRequest->user_id,
             ]);
         }
 
-        return response()->json(['message' => 'Volunteer request status updated successfully.']);
+        return response()->json(['message' => 'Status updated successfully']);
     }
 
 }

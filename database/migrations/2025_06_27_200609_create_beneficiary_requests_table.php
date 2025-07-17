@@ -53,6 +53,8 @@ return new class extends Migration
             $table->string('priority_ar')->nullable();
             $table->string('priority_en')->nullable();
             $table->boolean('is_sorted');
+            $table->boolean('is_read_by_admin')->default(false);
+
             $table->timestamps();
         });
     }

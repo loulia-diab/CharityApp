@@ -32,6 +32,7 @@ class Volunteer_request extends Model
         'status_en',
         'reason_of_rejection_ar',
         'reason_of_rejection_en',
+        'is_read_by_admin',
     ];
 
     public function days()
@@ -58,5 +59,9 @@ class Volunteer_request extends Model
     {
         return $this->hasOne(Volunteer::class);
     }
+
+    protected $casts = [
+        'is_read_by_admin' => 'boolean',
+    ];
 
 }

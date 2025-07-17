@@ -56,9 +56,19 @@ Route::prefix('volunteer_request')->group(function () {
     Route::post('/add', [VolunteerRequestController::class, 'addVolunteerRequest']);
     Route::get('/getAllUserRequests', [VolunteerRequestController::class, 'getAllUserVolunteerRequests']);
     Route::get('/getDetails/{id}', [VolunteerRequestController::class, 'getVolunteerRequestDetails']);
+    Route::get('/getFilterByStatus', [VolunteerRequestController::class, 'getVolunteerRequestsByStatusForAdmin']);
+    Route::get('/getUnreadRequests', [VolunteerRequestController::class, 'getUnreadVolunteerRequests']);
+    Route::post('/updateStatus/{id}', [VolunteerRequestController::class, 'updateVolunteerRequestStatus']);
 });
 Route::prefix('beneficiary_request')->group(function () {
-    Route::post('/add', [BeneficiaryRequestController::class, 'add']);
+    Route::post('/add', [BeneficiaryRequestController::class, 'addBeneficiaryRequest']);
+    Route::get('/getAllUserRequests', [BeneficiaryRequestController::class, 'getAllUserBeneficiaryRequests']);
+    Route::get('/getDetails/{id}', [BeneficiaryRequestController::class, 'getBeneficiaryRequestDetails']);
+    Route::get('/getFilterByStatus', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByStatusForAdmin']);
+    Route::get('/getUnreadRequests', [BeneficiaryRequestController::class, 'getUnreadBeneficiaryRequests']);
+    Route::post('/updateStatus/{id}', [BeneficiaryRequestController::class, 'updateBeneficiaryRequestStatus']);
+    Route::get('/getFilterByPriority', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByPriority']);
+    Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
 });
 Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);

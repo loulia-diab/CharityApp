@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 class BeneficiaryRequestController extends Controller
 {
-    public function add(Request $request)
+    public function addBeneficiaryRequest(Request $request)
     {
         $user = null;
         $admin = null;
@@ -105,6 +105,292 @@ class BeneficiaryRequestController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function getAllUserBeneficiaryRequests(Request $request)
+    {
+        $user = auth()->guard('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale(); // 'ar' or 'en'
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        $requests = Beneficiary_request::where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) use ($locale, $fallback) {
+                return [
+                    'id' => $request->id,
+                    'name' => $request->{'name_' . $locale} ?? $request->{'name_' . $fallback},
+                    'status' => $request->{'status_' . $locale} ?? $request->{'status_' . $fallback},
+                    'created_at' => $request->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json(['data' => $requests]);
+    }
+
+    public function getBeneficiaryRequestDetails(Request $request, $id)
+    {
+        $user = auth()->guard('api')->user();
+        $admin = auth()->guard('admin')->user();
+
+        if (!$user && !$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale(); // 'ar' or 'en'
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        // جلب الطلب مع التفاصيل
+        $requestData = Beneficiary_request::with('details')->findOrFail($id);
+
+        // السماح فقط لصاحب الطلب أو الأدمن
+        if ($user && $requestData->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        // تحضير البيانات
+        $data = [
+            'id' => $requestData->id,
+            'user_id' => $requestData->user_id,
+            'admin_id' => $requestData->admin_id,
+            'name' => $requestData->{'name_' . $locale} ?? $requestData->{'name_' . $fallback},
+            'father_name' => $requestData->{'father_name_' . $locale} ?? $requestData->{'father_name_' . $fallback},
+            'mother_name' => $requestData->{'mother_name_' . $locale} ?? $requestData->{'mother_name_' . $fallback},
+            'gender' => $requestData->{'gender_' . $locale} ?? $requestData->{'gender_' . $fallback},
+            'birth_date' => $requestData->birth_date,
+            'marital_status' => $requestData->{'marital_status_' . $locale} ?? $requestData->{'marital_status_' . $fallback},
+            'num_of_members' => $requestData->num_of_members,
+            'study' => $requestData->{'study_' . $locale} ?? $requestData->{'study_' . $fallback},
+            'has_job' => $requestData->has_job,
+            'job' => $requestData->{'job_' . $locale} ?? $requestData->{'job_' . $fallback},
+            'housing_type' => $requestData->{'housing_type_' . $locale} ?? $requestData->{'housing_type_' . $fallback},
+            'has_fixed_income' => $requestData->has_fixed_income,
+            'fixed_income' => $requestData->fixed_income,
+            'address' => $requestData->{'address_' . $locale} ?? $requestData->{'address_' . $fallback},
+            'phone' => $requestData->phone,
+            'main_category' => $requestData->{'main_category_' . $locale} ?? $requestData->{'main_category_' . $fallback},
+            'sub_category' => $requestData->{'sub_category_' . $locale} ?? $requestData->{'sub_category_' . $fallback},
+            'notes' => $requestData->{'notes_' . $locale} ?? $requestData->{'notes_' . $fallback},
+            'status' => $requestData->{'status_' . $locale} ?? $requestData->{'status_' . $fallback},
+            'reason_of_rejection' => $requestData->{'reason_of_rejection_' . $locale} ?? $requestData->{'reason_of_rejection_' . $fallback},
+            'priority' => $requestData->{'priority_' . $locale} ?? $requestData->{'priority_' . $fallback},
+            'is_sorted' => $requestData->is_sorted,
+            'created_at' => $requestData->created_at->toDateTimeString(),
+            'details' => $requestData->details->map(function ($detail) use ($locale, $fallback) {
+                return [
+                    'id' => $detail->id,
+                    'field_name' => $detail->{'field_name_' . $locale} ?? $detail->{'field_name_' . $fallback},
+                    'field_value' => $detail->{'field_value_' . $locale} ?? $detail->{'field_value_' . $fallback},
+                ];
+            }),
+        ];
+        // إذا الأدمن فتح الطلب يتم تحديث حالة القراءة
+        if ($admin && !$requestData->is_read_by_admin) {
+            $requestData->update(['is_read_by_admin' => true]);
+        }
+        return response()->json(['data' => $data]);
+    }
+
+    public function getBeneficiaryRequestsByStatusForAdmin(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $status = $request->query('status'); // قيم: 'accepted', 'rejected', 'pending'
+        $locale = app()->getLocale();
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        // تحديد الترجمة المقابلة للحالة
+        $statusMap = [
+            'accepted' => ['ar' => 'مقبول', 'en' => 'accepted'],
+            'rejected' => ['ar' => 'مرفوض', 'en' => 'rejected'],
+            'pending' => ['ar' => 'قيد الانتظار', 'en' => 'pending'],
+        ];
+
+        if (!array_key_exists($status, $statusMap)) {
+            return response()->json(['message' => 'Invalid status filter'], 400);
+        }
+
+        $translatedStatus = $statusMap[$status][$locale];
+
+        // جلب الطلبات التي تطابق الحالة
+        $requests = Beneficiary_request::where('status_' . $locale, $translatedStatus)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) use ($locale, $fallback) {
+                return [
+                    'id' => $request->id,
+                    'name' => $request->{'name_' . $locale} ?? $request->{'name_' . $fallback},
+                    'status' => $request->{'status_' . $locale} ?? $request->{'status_' . $fallback},
+                    'created_at' => $request->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json(['data' => $requests]);
+    }
+
+    public function getUnreadBeneficiaryRequests()
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale();
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        $requests = Beneficiary_request::where('is_read_by_admin', false)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) use ($locale, $fallback) {
+                return [
+                    'id' => $request->id,
+                    'name' => $request->{'name_' . $locale} ?? $request->{'name_' . $fallback},
+                    'created_at' => $request->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json(['data' => $requests]);
+    }
+
+    public function updateBeneficiaryRequestStatus(Request $request, $id)
+    {
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $requestData = Beneficiary_request::findOrFail($id);
+
+        $locale = app()->getLocale(); // ar أو en
+
+        $statusMap = [
+            'accepted' => ['ar' => 'مقبول', 'en' => 'accepted'],
+            'rejected' => ['ar' => 'مرفوض', 'en' => 'rejected'],
+        ];
+
+        // تحقق من المدخلات
+        $validated = $request->validate([
+            'status' => 'required|in:accepted,rejected',
+
+            // عند القبول
+            'priority_ar' => ['required_if:status,accepted', 'in:عالية,متوسطة,منخفضة'],
+            'priority_en' => ['required_if:status,accepted', 'in:high,medium,low'],
+
+            // عند الرفض
+            'reason_of_rejection_ar' => 'required_if:status,rejected',
+            'reason_of_rejection_en' => 'required_if:status,rejected',
+        ]);
+
+        $status = $validated['status'];
+
+        $updateData = [
+            'status_ar' => $statusMap[$status]['ar'],
+            'status_en' => $statusMap[$status]['en'],
+        ];
+
+        if ($status === 'accepted') {
+            $updateData['priority_ar'] = $validated['priority_ar'];
+            $updateData['priority_en'] = $validated['priority_en'];
+        }
+
+        if ($status === 'rejected') {
+            $updateData['reason_of_rejection_ar'] = $validated['reason_of_rejection_ar'];
+            $updateData['reason_of_rejection_en'] = $validated['reason_of_rejection_en'];
+        }
+
+        $requestData->update($updateData);
+
+        return response()->json(['message' => 'Request status updated successfully']);
+    }
+
+    public function getBeneficiaryRequestsByPriority(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale(); // ar أو en
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        $priority = $request->query('priority');
+
+        // القيم المسموح بها
+        $allowedPriorities = [
+            'ar' => ['عالية', 'متوسطة', 'منخفضة'],
+            'en' => ['high', 'medium', 'low'],
+        ];
+
+        if (!in_array($priority, $allowedPriorities[$locale])) {
+            return response()->json(['message' => 'Invalid priority value'], 400);
+        }
+
+        // اسم العمود المناسب للغة
+        $priorityColumn = 'priority_' . $locale;
+        $statusColumn = 'status_' . $locale;
+
+        $requests = Beneficiary_request::where($statusColumn, $locale === 'ar' ? 'مقبول' : 'accepted')
+            ->where($priorityColumn, $priority)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) use ($locale, $fallback) {
+                return [
+                    'id' => $request->id,
+                    'name' => $request->{'name_' . $locale} ?? $request->{'name_' . $fallback},
+                    'priority' => $request->{'priority_' . $locale} ?? $request->{'priority_' . $fallback},
+                    'created_at' => $request->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json(['data' => $requests]);
+    }
+
+    public function getBeneficiaryRequestsByCategory(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale(); // ar أو en
+        $fallback = $locale === 'ar' ? 'en' : 'ar';
+
+        $mainCategory = $request->query('main_category');
+        $subCategory = $request->query('sub_category');
+
+        $statusColumn = 'status_' . $locale;
+        $mainCategoryColumn = 'main_category_' . $locale;
+        $subCategoryColumn = 'sub_category_' . $locale;
+
+        $query = Beneficiary_request::where($statusColumn, $locale === 'ar' ? 'مقبول' : 'accepted');
+
+        if ($mainCategory) {
+            $query->where($mainCategoryColumn, $mainCategory);
+        }
+
+        if ($subCategory) {
+            $query->where($subCategoryColumn, $subCategory);
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')->get()->map(function ($request) use ($locale, $fallback) {
+            return [
+                'id' => $request->id,
+                'name' => $request->{'name_' . $locale} ?? $request->{'name_' . $fallback},
+                'main_category' => $request->{'main_category_' . $locale} ?? $request->{'main_category_' . $fallback},
+                'sub_category' => $request->{'sub_category_' . $locale} ?? $request->{'sub_category_' . $fallback},
+                'created_at' => $request->created_at->toDateTimeString(),
+            ];
+        });
+
+        return response()->json(['data' => $requests]);
     }
 
 }

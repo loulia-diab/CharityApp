@@ -39,6 +39,8 @@ return new class extends Migration
             $table->string('status_en')->default('pending');
             $table->string('reason_of_rejection_ar')->nullable();
             $table->string('reason_of_rejection_en')->nullable();
+            $table->boolean('is_read_by_admin')->default(false);
+
             $table->timestamps();
         });
     }

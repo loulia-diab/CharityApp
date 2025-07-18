@@ -61,7 +61,6 @@ class CampaignBeneficiaryController extends Controller
         }
     }
 
-
     public function removeBeneficiaryFromCampaign($campaignId, $beneficiaryId)
     {
         $locale = app()->getLocale();
@@ -109,5 +108,8 @@ class CampaignBeneficiaryController extends Controller
             'status' => 200
         ]);
     }
+
+
+
 
 }

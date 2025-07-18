@@ -576,6 +576,7 @@ class CampaignController extends Controller
                     'image',
                     'goal_amount',
                     'collected_amount',
+                    'status'
                 )
                 ->get()
                 ->map(function ($campaign) {

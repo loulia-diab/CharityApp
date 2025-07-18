@@ -8,6 +8,7 @@ use App\Models\Beneficiary;
 class BeneficiaryController extends Controller
 {
     // استفاداتي من الحملات
+    // بدي وحدة للأدمن ووحدة لليوزر المستفيد/ المتطوع
     public function getBeneficiaryCampaigns($beneficiaryId)
     {
         $user = null;

@@ -208,7 +208,7 @@ class CategoryController extends Controller
     }
 
 
-    public function getAllCategoriesForUser2()
+    public function getAllCategoriesForUser()
     {
         $locale = app()->getLocale(); // 'ar' أو 'en'
         $categories = Category::select(

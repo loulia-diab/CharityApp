@@ -25,6 +25,8 @@ return new class extends Migration
                 ->onDelete('cascade');
 
             $table->timestamps();
+            $table->text('cancelled_note')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
         });
     }
 
@@ -34,5 +36,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('sponsorships');
+        Schema::table('sponsorships', function (Blueprint $table) {
+            $table->dropColumn(['cancelled_note', 'cancelled_at']);
+        });
     }
 };

@@ -184,7 +184,6 @@ class HumanCaseController extends Controller
         }
     }
 
-
     public function updateHumanCase(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -601,7 +600,6 @@ class HumanCaseController extends Controller
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
             $descField = "description_{$locale}";
-
             $cases = HumanCase::whereHas('campaign', function ($query) use ($categoryId) {
                 $query->where('category_id', $categoryId)
                     ->whereHas('category', function ($q) {

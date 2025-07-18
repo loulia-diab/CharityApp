@@ -77,6 +77,13 @@ class PlanController extends Controller
 
     //cancel
     // get PLANS for User كفالاتي
+    public function cancelPlan($id)
+    {
 
+    }
+    public function getPlansForUser($id)
+    {
+
+    }
 
 }

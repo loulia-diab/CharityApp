@@ -730,7 +730,7 @@ class CampaignController extends Controller
         }
     }
 
-    public function getVisibleCampaignsByCreationDate( $mainCategory = 'Campaign')
+    public function getVisibleCampaignsByCreationDate($mainCategory = 'Campaign')
     {
         try {
             $locale = app()->getLocale();
@@ -740,6 +740,7 @@ class CampaignController extends Controller
             $campaigns = Campaign::whereHas('category', function ($q) use ($mainCategory) {
                 $q->where('main_category', $mainCategory);
             })
+                ->where('status', CampaignStatus::Active) // ✅ فقط الحملات الفعالة
                 ->orderBy('created_at', 'desc')
                 ->select(
                     'id',
@@ -761,8 +762,10 @@ class CampaignController extends Controller
 
             $campaigns->transform(function ($campaign) use ($locale) {
                 $campaign->status_label = $campaign->status?->label($locale) ?? '';
+                $campaign->created_at_formatted = \Carbon\Carbon::parse($campaign->created_at)->translatedFormat('d F Y');
                 return $campaign;
             });
+
 
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم جلب الحملات حسب تاريخ الإضافة بنجاح' : 'Campaigns fetched by creation date successfully',

@@ -10,6 +10,7 @@ use App\Http\Controllers\Donation_Type\Campaign\CampaignFilterController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignVolunteerController;
 use App\Http\Controllers\Donation_Type\HumanCase\HumanCaseController;
 use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\user\PhoneAuthController;
 use App\Http\Controllers\user\UserAuthController;
 use App\Http\Controllers\user\UserController;
 use App\Http\Controllers\volunteer\VolunteerController;
@@ -31,11 +32,20 @@ Route::middleware('auth:sanctum')
 Route::prefix('user')->group(function () {
     Route::post('/register', [UserAuthController::class, 'register']);
     Route::post('/login', [UserAuthController::class, 'login']);
+
     Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
         Route::post('/logout', [UserAuthController::class, 'logout']);
         Route::get('/showProfile', [UserController::class, 'showProfile']);
         Route::post('/updateProfile', [UserController::class, 'updateProfile']);
+        Route::post('/changePassword', [UserController::class, 'changePassword']);
     });
+});
+
+Route::prefix('otp')->group(function () {
+Route::post('/otp/send-login', [PhoneAuthController::class, 'sendLoginOtp']);
+Route::post('/otp/send-reset', [PhoneAuthController::class, 'sendPasswordResetOtp']);
+Route::post('/otp/verify', [PhoneAuthController::class, 'verifyOtp']);
+Route::post('/password/reset', [PhoneAuthController::class, 'resetPassword']);
 });
 
 // Routes for admin

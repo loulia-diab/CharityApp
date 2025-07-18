@@ -18,6 +18,7 @@ return new class extends Migration
             $table->timestamp('expires_at');
             $table->timestamp('used_at')->nullable();
             $table->unsignedTinyInteger('attempts')->default(0);
+            $table->string('purpose')->default('login'); // login أو reset_password
             $table->timestamps();
         });
     }

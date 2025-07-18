@@ -10,6 +10,8 @@ class PhoneOtp extends Model
         'phone',
         'otp',
         'expires_at',
+        'used_at',
+        'purpose',
     ];
 
     public function user()

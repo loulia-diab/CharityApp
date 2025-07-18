@@ -134,21 +134,23 @@ Route::prefix('humanCase')->group(function () {
 
 });
 Route::prefix('category')->group(function () {
-    Route::get('/getAll/for/user', [CategoryController::class, 'getAllCategoriesForUser']);
+    Route::get('/{main_category}', [CategoryController::class, 'getAllCategoriesByMainCategory']);
     Route::get('/{categoryId}/for/user', [CategoryController::class, 'getCategoryByIdForUser']);
 });
 Route::prefix('campaigns')->group(function () {
-    Route::get('/getAll/for/user', [CampaignController::class, 'getAllVisibleCampaignsForUser']);
-    Route::get('/get/{Id}/for/user', [CampaignController::class, 'getVisibleCampaignByIdForUser']);
-    Route::get('/category/{categoryId}/for/user', [CampaignController::class, 'getVisibleCampaignsByCategoryForUser']);
-    Route::get('/archived/for/user', [CampaignController::class, 'getVisibleArchivedCampaigns']);
+    Route::get('{mainCategory}', [CampaignController::class, 'getAllVisibleCampaignsForUser']);
+    Route::get('/{mainCategory}/show/{id}', [CampaignController::class, 'getVisibleCampaignByIdForUser']);
+    Route::get('/{mainCategory}/category/{categoryId}', [CampaignController::class, 'getVisibleCampaignsByCategoryForUser']);
+    Route::get('/{mainCategory}/archived/forUser', [CampaignController::class, 'getVisibleArchivedCampaigns']);
+    Route::get('/{mainCategory}/byDate', [CampaignController::class, 'getVisibleCampaignsByCreationDate']);
 });
 
 Route::prefix('humanCases')->group(function () {
-    Route::get('/getAll/for/user', [HumanCaseController::class, 'getAllVisibleHumanCasesForUser']);
-    Route::get('get/{Id}/for/user', [HumanCaseController::class, 'getVisibleHumanCaseByIdForUser']);
-    Route::get('/category/{categoryId}/for/user', [HumanCaseController::class, 'getVisibleHumanCasesByCategoryForUser']);
-    Route::get('/getAll/emergency/for/user', [HumanCaseController::class, 'getAllVisibleEmergencyHumanCasesForUser']);
-    Route::get('/get/{Id}/emergency/for/user', [HumanCaseController::class, 'getVisibleEmergencyHumanCaseByIdForUser']);
-    Route::get('/archived/for/user', [HumanCaseController::class, 'getVisibleArchivedHumanCases']);
+    Route::get('/{mainCategory}/getAll/for/user', [HumanCaseController::class, 'getAllVisibleHumanCasesForUser']);
+    Route::get('/{mainCategory}/get/{id}/for/user', [HumanCaseController::class, 'getVisibleHumanCaseByIdForUser']);
+    Route::get('/{mainCategory}/category/{categoryId}/for/user', [HumanCaseController::class, 'getVisibleHumanCasesByCategoryForUser']);
+    Route::get('/{mainCategory}/getAll/emergency/for/user', [HumanCaseController::class, 'getAllVisibleEmergencyHumanCasesForUser']);
+    Route::get('/{mainCategory}/get/{id}/emergency/for/user', [HumanCaseController::class, 'getVisibleEmergencyHumanCaseByIdForUser']);
+    Route::get('/{mainCategory}/archived/for/user', [HumanCaseController::class, 'getVisibleArchivedHumanCases']);
 });
+

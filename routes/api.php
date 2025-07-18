@@ -124,6 +124,7 @@ Route::prefix('humanCase')->group(function () {
 
 });
 Route::prefix('category')->group(function () {
+    Route::get('/getAll/',[CategoryController::class,'getAllCategoriesForUser']);
     Route::get('/{main_category}', [CategoryController::class, 'getAllCategoriesByMainCategory']);
     Route::get('/{categoryId}/for/user', [CategoryController::class, 'getCategoryByIdForUser']);
 });

@@ -27,6 +27,9 @@ class BeneficiarySeeder extends Seeder
                 'beneficiary_request_id' => $request->id,
                 'created_at' => now(),
                 'updated_at' => now(),
+                'priority_ar'=> 'متوسطة',
+                'priority_en'=>'medium',
+                'is_sorted'=>false,
             ]);
         }
     }

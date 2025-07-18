@@ -22,7 +22,6 @@ class Beneficiary_request extends Model
         'notes_ar', 'notes_en',
         'status_ar', 'status_en',
         'reason_of_rejection_ar', 'reason_of_rejection_en',
-        'priority_ar', 'priority_en','is_sorted',
         'is_read_by_admin',
     ];
 

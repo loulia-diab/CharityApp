@@ -9,6 +9,7 @@ class Beneficiary extends Model
     protected $fillable = [
         'user_id',
         'beneficiary_request_id',
+        'priority_ar', 'priority_en','is_sorted',
     ];
 
     public function user()

@@ -75,13 +75,18 @@ class PlanController extends Controller
         ]);
     }
 
-    //cancel
-    // get PLANS for User كفالاتي
     public function cancelPlan($id)
     {
 
     }
+
+    // كفالاتي
     public function getPlansForUser($id)
+    {
+
+    }
+
+    public function getPlanDetails($id)
     {
 
     }

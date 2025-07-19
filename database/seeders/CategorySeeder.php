@@ -20,8 +20,9 @@ class CategorySeeder extends Seeder
             //
             ['main_category'=>'HumanCase','name_category_en' => 'All',         'name_category_ar' => 'الكل'],
             ['main_category'=>'HumanCase','name_category_en' => 'Patients',        'name_category_ar' => 'مرضى'],
-            ['main_category'=>'HumanCase','name_category_en' => 'Needy Families',  'name_category_ar' => 'أسر متعففة'],
             ['main_category'=>'HumanCase','name_category_en' => 'Student',         'name_category_ar' => 'طالب علم'],
+            ['main_category'=>'HumanCase','name_category_en' => 'Needy Families',  'name_category_ar' => 'أسر متعففة'],
+
             //
             ['main_category'=>'Sponsorship','name_category_en' => 'All',         'name_category_ar' => 'الكل'],
             ['main_category'=>'Sponsorship','name_category_en' => 'Orphan',        'name_category_ar' => 'يتيم'],

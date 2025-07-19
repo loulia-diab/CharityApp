@@ -99,6 +99,61 @@ class HumanCaseController extends Controller
             ], 500);
         }
     }
+    public function getAllHumanCases2(Request $request)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => app()->getLocale() === 'ar' ? 'غير مصرح - فقط للمسؤول' : 'Unauthorized - Admin access only',
+            ], 401);
+        }
+
+        try {
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+
+            // جلب الحالات الإنسانية مع الحملة والمستفيد مع شرط main_category = 'HumanCase' عبر علاقة category
+            $humanCases = HumanCase::whereHas('campaign.category', function ($q) {
+                $q->where('main_category', 'HumanCase');
+            })
+                ->with(['campaign.category', 'beneficiary'])
+                ->latest()
+                ->get();
+
+            $formattedCases = $humanCases->map(function ($humanCase) use ($locale, $titleField, $descField) {
+                $campaign = $humanCase->campaign;
+
+                return [
+                    'id' => $humanCase->id,
+                    'is_emergency' => $humanCase->is_emergency,
+                    'title' => $campaign ? $campaign->$titleField : null,
+                    'description' => $campaign ? $campaign->$descField : null,
+                    'category_id' => $campaign ? $campaign->category_id : null,
+                    'goal_amount' => $campaign ? $campaign->goal_amount : null,
+                    'collected_amount' => $campaign ? $campaign->collected_amount : null,
+                    'start_date' => $campaign ? $campaign->start_date : null,
+                    'end_date' => $campaign ? $campaign->end_date : null,
+                    'status_label' => $campaign && $campaign->status ? CampaignStatus::from($campaign->status)->label($locale) : null,
+                    'image' => $campaign ? $campaign->image : null,
+                ];
+            });
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب الحالات الإنسانية بنجاح' : 'Human cases fetched successfully',
+                'data' => $formattedCases,
+                'status' => 200
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => app()->getLocale() === 'ar' ? 'حدث خطأ أثناء جلب الحالات الإنسانية' : 'Error fetching human cases',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
+
     public function addHumanCase(Request $request)
     {
         $locale = app()->getLocale();
@@ -183,7 +238,6 @@ class HumanCaseController extends Controller
             ], 500);
         }
     }
-
     public function updateHumanCase(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -276,61 +330,6 @@ class HumanCaseController extends Controller
             ]);
         }
     }
-    public function getAllHumanCases2(Request $request)
-    {
-        $admin = auth('admin')->user();
-        if (!$admin) {
-            return response()->json([
-                'message' => app()->getLocale() === 'ar' ? 'غير مصرح - فقط للمسؤول' : 'Unauthorized - Admin access only',
-            ], 401);
-        }
-
-        try {
-            $locale = app()->getLocale();
-            $titleField = "title_{$locale}";
-            $descField = "description_{$locale}";
-
-            // جلب الحالات الإنسانية مع الحملة والمستفيد مع شرط main_category = 'HumanCase' عبر علاقة category
-            $humanCases = HumanCase::whereHas('campaign.category', function ($q) {
-                $q->where('main_category', 'HumanCase');
-            })
-                ->with(['campaign.category', 'beneficiary'])
-                ->latest()
-                ->get();
-
-            $formattedCases = $humanCases->map(function ($humanCase) use ($locale, $titleField, $descField) {
-                $campaign = $humanCase->campaign;
-
-                return [
-                    'id' => $humanCase->id,
-                    'is_emergency' => $humanCase->is_emergency,
-                    'title' => $campaign ? $campaign->$titleField : null,
-                    'description' => $campaign ? $campaign->$descField : null,
-                    'category_id' => $campaign ? $campaign->category_id : null,
-                    'goal_amount' => $campaign ? $campaign->goal_amount : null,
-                    'collected_amount' => $campaign ? $campaign->collected_amount : null,
-                    'start_date' => $campaign ? $campaign->start_date : null,
-                    'end_date' => $campaign ? $campaign->end_date : null,
-                    'status_label' => $campaign && $campaign->status ? CampaignStatus::from($campaign->status)->label($locale) : null,
-                    'image' => $campaign ? $campaign->image : null,
-                ];
-            });
-
-            return response()->json([
-                'message' => $locale === 'ar' ? 'تم جلب الحالات الإنسانية بنجاح' : 'Human cases fetched successfully',
-                'data' => $formattedCases,
-                'status' => 200
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => app()->getLocale() === 'ar' ? 'حدث خطأ أثناء جلب الحالات الإنسانية' : 'Error fetching human cases',
-                'error' => $e->getMessage(),
-                'status' => 500
-            ]);
-        }
-    }
-
     public function getAllHumanCases(Request $request)
     {
         $admin = auth('admin')->user();
@@ -382,7 +381,6 @@ class HumanCaseController extends Controller
             ]);
         }
     }
-
     public function getHumanCaseDetails($id)
     {
         $locale = app()->getLocale();
@@ -425,6 +423,8 @@ class HumanCaseController extends Controller
 
         $campaign = $humanCase->campaign;
         $campaign->status_label = $campaign->status->label($locale);
+        $campaign->remaining_amount = max(0, $campaign->goal_amount - $campaign->collected_amount);
+
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم جلب تفاصيل الحالة الإنسانية بنجاح' : 'Human case fetched successfully',
@@ -436,6 +436,7 @@ class HumanCaseController extends Controller
                 'category_id' => $campaign->category_id,
                 'goal_amount' => $campaign->goal_amount,
                 'collected_amount' => $campaign->collected_amount,
+                'remaining_amount'=>$campaign->remaining_amount,
                 'start_date' => $campaign->start_date,
                 'end_date' => $campaign->end_date,
                 'status_label' => $campaign->status_label,
@@ -444,7 +445,6 @@ class HumanCaseController extends Controller
             'status' => 200
         ]);
     }
-
 
     public function activateEmergency(Request $request, $id)
     {
@@ -522,8 +522,7 @@ class HumanCaseController extends Controller
         }
     }
 
-    // خليها لبعدين
-    public function getHumanCasesByStatus(Request $request)
+    public function getHumanCasesByStatus2($categoryId, $status)
     {
         $admin = auth('admin')->user();
         if (!$admin) {
@@ -534,16 +533,21 @@ class HumanCaseController extends Controller
         }
 
         try {
-            $validated = $request->validate([
-                'status' => ['required', Rule::in(CampaignStatus::values())],
-            ]);
+            if (!in_array($status, CampaignStatus::values())) {
+                return response()->json([
+                    'message' => app()->getLocale() === 'ar' ? 'قيمة الحالة غير صالحة' : 'Invalid status value',
+                    'status_code' => 422
+                ], 422);
+            }
 
             $locale = app()->getLocale();
             $titleField = "title_{$locale}";
             $descField = "description_{$locale}";
 
-            $cases = HumanCase::whereHas('campaign', function ($query) use ($validated) {
-                $query->where('status', $validated['status'])
+            $cases = HumanCase::whereHas('campaign', function ($query) use ($status, $categoryId) {
+                $query->where('status', $status)
+                    ->where('status', '!=', \App\Enums\CampaignStatus::Archived)
+                    ->where('category_id', $categoryId)
                     ->whereHas('category', function ($q) {
                         $q->where('main_category', 'HumanCase');
                     });
@@ -570,11 +574,11 @@ class HumanCaseController extends Controller
                 });
 
             return response()->json([
-                'status' => $validated['status'],
+                'status' => $status,
                 'message' => $locale === 'ar' ? 'تم جلب الحالات بنجاح' : 'Human cases fetched successfully',
                 'data' => $cases,
                 'status_code' => 200
-            ], 200);
+            ]);
 
         } catch (\Exception $e) {
             $locale = app()->getLocale();
@@ -583,6 +587,143 @@ class HumanCaseController extends Controller
                 'error' => $e->getMessage(),
                 'status_code' => 500
             ], 500);
+        }
+    }
+    public function getHumanCasesByStatus($categoryId, $status)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => app()->getLocale() === 'ar' ? 'غير مصرح - فقط للمسؤول' : 'Unauthorized - Admin access only',
+                'status_code' => 401
+            ], 401);
+        }
+
+        try {
+            if (!in_array($status, CampaignStatus::values())) {
+                return response()->json([
+                    'message' => app()->getLocale() === 'ar' ? 'قيمة الحالة غير صالحة' : 'Invalid status value',
+                    'status_code' => 422
+                ], 422);
+            }
+
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+            $categoryNameField = "name_category_{$locale}";
+
+            // جلب الكاتيجوري للتأكد من وجودها وجلب اسمها
+            $category = Category::where('id', $categoryId)
+                ->where('main_category', 'HumanCase')
+                ->first();
+
+            if (!$category) {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'الفئة غير موجودة' : 'Category not found',
+                    'status_code' => 404
+                ], 404);
+            }
+
+            $cases = HumanCase::whereHas('campaign', function ($query) use ($status, $categoryId) {
+                $query->where('status', $status)
+                    ->where('status', '!=', \App\Enums\CampaignStatus::Archived)
+                    ->where('category_id', $categoryId)
+                    ->whereHas('category', function ($q) {
+                        $q->where('main_category', 'HumanCase');
+                    });
+            })
+                ->with('campaign')
+                ->get()
+                ->map(function ($case) use ($locale, $titleField, $descField) {
+                    $campaign = $case->campaign;
+                    return [
+                        'id' => $case->id,
+                        'beneficiary_id' => $case->beneficiary_id,
+                        'is_emergency' => $case->is_emergency,
+                        'title' => $campaign->$titleField,
+                        'description' => $campaign->$descField,
+                        'category_id' => $campaign->category_id,
+                        'goal_amount' => $campaign->goal_amount,
+                        'collected_amount' => $campaign->collected_amount,
+                        'start_date' => $campaign->start_date,
+                        'end_date' => $campaign->end_date,
+                        'status' => $campaign->status,
+                        'image' => $campaign->image,
+                        'status_label' => $campaign->status->label($locale),
+                    ];
+                });
+
+            return response()->json([
+                'status' => $status,
+                'category_id' => $category->id,
+                'category_name' => $category->$categoryNameField,
+                'has_cases' => $cases->isNotEmpty(),
+                'data' => $cases,
+                'message' => $locale === 'ar' ? 'تم جلب الحالات بنجاح' : 'Human cases fetched successfully',
+                'status_code' => 200
+            ]);
+
+        } catch (\Exception $e) {
+            $locale = app()->getLocale();
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحالات' : 'Error fetching human cases',
+                'error' => $e->getMessage(),
+                'status_code' => 500
+            ], 500);
+        }
+    }
+
+
+
+    public function getHumanCasesByCreationDate(Request $request)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => app()->getLocale() === 'ar' ? 'غير مصرح - فقط للمسؤول' : 'Unauthorized - Admin access only',
+            ], 401);
+        }
+
+        try {
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+
+            // جلب الحالات الإنسانية مع الحملة والمستفيد مع شرط main_category = 'HumanCase' عبر علاقة category
+            $humanCases = HumanCase::whereHas('campaign.category', function ($q) {
+                $q->where('main_category', 'HumanCase');
+            })
+                ->with(['campaign', 'beneficiary'])
+                ->latest()
+                ->get();
+
+            $formattedCases = $humanCases->map(function ($humanCase) use ($locale, $titleField, $descField) {
+                $campaign = $humanCase->campaign;
+                return [
+                    'id' => $humanCase->id,
+                    'is_emergency' => $humanCase->is_emergency,
+                    'case_name' => $campaign ? $campaign->$titleField : null,  // هنا اسم الحالة حسب اللغة
+                    'description' => $campaign ? $campaign->$descField : null,
+                    'category_id' => $campaign ? $campaign->category_id : null,
+                    'goal_amount' => $campaign ? $campaign->goal_amount : null,
+                    'collected_amount' => $campaign ? $campaign->collected_amount : null,
+                    'status_label' => $campaign->status->label($locale),
+                    'image' => $campaign ? $campaign->image : null,
+                ];
+            });
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب الحالات الإنسانية بنجاح' : 'Human cases fetched successfully',
+                'data' => $formattedCases,
+                'status' => 200
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => app()->getLocale() === 'ar' ? 'حدث خطأ أثناء جلب الحالات الإنسانية' : 'Error fetching human cases',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
         }
     }
 
@@ -641,7 +782,6 @@ class HumanCaseController extends Controller
         }
     }
 
-
     public function archiveHumanCase(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -695,7 +835,6 @@ class HumanCaseController extends Controller
             ]);
         }
     }
-
 
     public function activateHumanCase(Request $request, $id)
     {
@@ -922,6 +1061,7 @@ class HumanCaseController extends Controller
                         'image' => $campaign->image,
                         'goal_amount' => $campaign->goal_amount,
                         'collected_amount' => $campaign->collected_amount,
+                        'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
                     ];
                 });
 

@@ -9,6 +9,8 @@ use App\Http\Controllers\Donation_Type\Campaign\CampaignController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignFilterController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignVolunteerController;
 use App\Http\Controllers\Donation_Type\HumanCase\HumanCaseController;
+use App\Http\Controllers\Donation_Type\Sponsorship\PlanController;
+use App\Http\Controllers\Donation_Type\Sponsorship\SponsorshipController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\user\PhoneAuthController;
 use App\Http\Controllers\user\UserAuthController;
@@ -87,7 +89,6 @@ Route::prefix('category')->group(function () {
     Route::delete('/delete/{categoryId}',[CategoryController::class,'deleteCategory']);
     Route::post('/update/{categoryId}',[CategoryController::class,'updateCategory']);
 });
-
 Route::prefix('campaigns')->group(function () {
     // Admin
     Route::post('/add', [CampaignController::class, 'addCampaign']);
@@ -95,8 +96,8 @@ Route::prefix('campaigns')->group(function () {
     Route::get('/get/{Id}', [CampaignController::class, 'getCampaignDetails']);
     Route::get('/category/{categoryId}', [CampaignController::class, 'getCampaignsByCategory']);
     Route::post('/update/{Id}', [CampaignController::class, 'updateCampaign']);
-    Route::get('/byStatus', [CampaignController::class, 'getCampaignsByStatus']);
-    Route::get('/byCreationDate', [CampaignController::class, 'getCampaignsByCreationDate']);
+    Route::get('category/{categoryId}/status/{status}', [CampaignController::class, 'getCampaignsByStatus']);
+    Route::get('byCreationDate', [CampaignController::class, 'getCampaignsByCreationDate']);
     Route::post('/activate/{Id}', [CampaignController::class, 'activateCampaign']);
     Route::post('/archive/{Id}', [CampaignController::class, 'archiveCampaign']);
     Route::get('/archivedCampaigns', [CampaignController::class, 'getArchivedCampaigns']);
@@ -114,25 +115,54 @@ Route::prefix('campaigns')->group(function () {
     Route::get('/{campaignId}/getVolunteers', [CampaignVolunteerController::class, 'getCampaignVolunteers']);
     Route::delete('/{campaignId}/deleteVolunteers/{volunteerId}', [CampaignVolunteerController::class, 'removeVolunteerFromCampaign']);
 });
-    Route::get('/beneficiary/{beneficiaryId}/campaigns', [BeneficiaryController::class, 'getBeneficiaryCampaigns']);
-    Route::get('/beneficiary/{beneficiaryId}/humanCases', [BeneficiaryController::class, 'getBeneficiaryHumanCases']);
-    Route::get('/volunteer/{volunteerId}/campaigns', [VolunteerController::class, 'getVolunteerCampaigns']);
+
+Route::get('/beneficiary/{beneficiaryId}/campaigns', [BeneficiaryController::class, 'getBeneficiaryCampaigns']);
+Route::get('/beneficiary/{beneficiaryId}/humanCases', [BeneficiaryController::class, 'getBeneficiaryHumanCases']);
+Route::get('/volunteer/{volunteerId}/campaigns', [VolunteerController::class, 'getVolunteerCampaigns']);
 
 Route::prefix('humanCase')->group(function () {
     // Admin
     Route::post('/add', [HumanCaseController::class, 'addHumanCase']);
+    Route::post('/update/{Id}', [HumanCaseController::class, 'updateHumanCase']);
+    Route::post('/activeEmergency/{Id}', [HumanCaseController::class, 'activateEmergency']);
+    Route::post('/activate/{Id}', [HumanCaseController::class, 'activateHumanCase']);
+    Route::post('/archive/{Id}', [HumanCaseController::class, 'archiveHumanCase']);
     Route::get('/getAll', [HumanCaseController::class, 'getAllHumanCases']);
     Route::get('/get/{Id}', [HumanCaseController::class, 'getHumanCaseDetails']);
     Route::get('/category/{categoryId}', [HumanCaseController::class, 'getHumanCasesByCategory']);
-    Route::post('/update/{Id}', [HumanCaseController::class, 'updateHumanCase']);
-    Route::post('/activeEmergency/{Id}', [HumanCaseController::class, 'activateEmergency']);
     Route::get('/emergency', [HumanCaseController::class, 'getEmergencyHumanCases']);
-    Route::post('/activate/{Id}', [HumanCaseController::class, 'activateHumanCase']);
-    Route::post('/archive/{Id}', [HumanCaseController::class, 'archiveHumanCase']);
     Route::get('/archivedHumanCases', [HumanCaseController::class, 'getArchivedHumanCases']);
+    Route::get('/category/{categoryId}/byStatus/{status}', [HumanCaseController::class, 'getHumanCasesByStatus']);
+    Route::get('byCreationDate', [HumanCaseController::class, 'getHumanCasesByCreationDate']);
+});
+
+Route::prefix('sponsorship')->group(function () {
+        // Admin
+    Route::post('/add', [SponsorshipController::class, 'addSponsorship']);
+    Route::post('/update/{Id}', [SponsorshipController::class, 'updateSponsorship']);
+    Route::post('/activate/{Id}', [SponsorshipController::class, 'activateSponsorship']);
+    Route::post('/cancelled/{Id}', [SponsorshipController::class, 'cancelledSponsorship']);
+    Route::get('/getAll', [SponsorshipController::class, 'getAllSponsorShips']);
+    Route::get('/get/{Id}', [SponsorshipController::class, 'getSponsorshipDetails']);
+    Route::get('/category/{categoryId}', [SponsorshipController::class, 'getSponsorshipsByCategory']);
+    Route::get('byStatus/category/{categoryId}', [SponsorshipController::class, 'getSponsorShipsByStatus']);
+    Route::get('byCreationDate', [SponsorshipController::class, 'getAllSponsorshipsByCreationDate']);
+    Route::get('getCancelled', [SponsorshipController::class, 'getCancelledSponsorships']);
+    });
+
+Route::prefix('plans')->group(function () {
+    Route::post('/add', [PlanController::class,'createPlanForSponsorship']);
+    Route::post('/deactivate/{Id}', [PlanController::class, 'deactivatePlan']);
+    Route::post('/activate/{Id}', [PlanController::class, 'activatePlan']);
+    Route::post('/cancelled/{Id}', [PlanController::class, 'cancelPlan']);
+    Route::get('/getAll', [PlanController::class, 'getPlansForUser']);
+    Route::get('/get/{Id}', [PlanController::class, 'getPlanDetails']);
+
 });
 
 });
+
+// NO AUTH FOR USER LIKE GUEST
 Route::prefix('category')->group(function () {
   //  Route::get('/getAll/',[CategoryController::class,'getAllCategoriesForUser']);
     Route::get('/{main_category}', [CategoryController::class, 'getAllCategoriesByMainCategory']);
@@ -145,7 +175,6 @@ Route::prefix('campaigns')->group(function () {
     Route::get('/{mainCategory}/archived/forUser', [CampaignController::class, 'getVisibleArchivedCampaigns']);
     Route::get('/{mainCategory}/byDate', [CampaignController::class, 'getVisibleCampaignsByCreationDate']);
 });
-
 Route::prefix('humanCases')->group(function () {
     Route::get('/{mainCategory}/getAll/for/user', [HumanCaseController::class, 'getAllVisibleHumanCasesForUser']);
     Route::get('/{mainCategory}/get/{id}/for/user', [HumanCaseController::class, 'getVisibleHumanCaseByIdForUser']);
@@ -153,5 +182,12 @@ Route::prefix('humanCases')->group(function () {
     Route::get('/{mainCategory}/getAll/emergency/for/user', [HumanCaseController::class, 'getAllVisibleEmergencyHumanCasesForUser']);
     Route::get('/{mainCategory}/get/{id}/emergency/for/user', [HumanCaseController::class, 'getVisibleEmergencyHumanCaseByIdForUser']);
     Route::get('/{mainCategory}/archived/for/user', [HumanCaseController::class, 'getVisibleArchivedHumanCases']);
+});
+
+Route::prefix('sponsorships')->group(function () {
+    Route::get('/{mainCategory}', [SponsorshipController::class, 'getAllVisibleSponsorshipsForUsers']);
+    Route::get('/{mainCategory}/show/{id}', [SponsorshipController::class, 'getVisibleSponsorshipDetailsForUser']);
+    Route::get('/{mainCategory}/category/{categoryId}', [SponsorshipController::class, 'getVisibleSponsorshipsByCategoryForUsers']);
+
 });
 

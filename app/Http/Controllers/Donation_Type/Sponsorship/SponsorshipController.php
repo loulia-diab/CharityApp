@@ -93,7 +93,6 @@ class SponsorshipController extends Controller
             ], 500);
         }
     }
-
     public function updateSponsorship(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -183,7 +182,6 @@ class SponsorshipController extends Controller
             ]);
         }
     }
-
     public function activateSponsorship(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -371,7 +369,6 @@ class SponsorshipController extends Controller
             ]);
         }
     }
-
     public function getCancelledSponsorships()
     {
         $locale = app()->getLocale();
@@ -423,7 +420,6 @@ class SponsorshipController extends Controller
             ]);
         }
     }
-
     public function getAllSponsorshipsByCreationDate()
     {
         $locale = app()->getLocale();
@@ -458,9 +454,6 @@ class SponsorshipController extends Controller
             'status' => 200
         ]);
     }
-
-
-
     public function getSponsorshipDetails($id)
     {
         $admin = auth('admin')->user();
@@ -508,10 +501,6 @@ class SponsorshipController extends Controller
             ], 500);
         }
     }
-
-
-
-
     public function getSponsorShipsByStatus(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -543,8 +532,10 @@ class SponsorshipController extends Controller
             ]);
         }
     }
+     public function getAllSponsorShips()
+     {
 
-
+     }
 
 
     // User
@@ -638,13 +629,11 @@ class SponsorshipController extends Controller
             ]);
         }
     }
-
     public function getVisibleSponsorshipsByCategoryForUsers()
     {
 
     }
-    // CATEGORY
-    public function getVisibleArchivedSponsorships(Request $request)
+    public function getVisibleSponsorshipsByCreationDate(Request $request)
     {
         $perPage = $request->get('per_page', 10);
 

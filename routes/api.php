@@ -145,9 +145,9 @@ Route::prefix('sponsorship')->group(function () {
     Route::get('/getAll', [SponsorshipController::class, 'getAllSponsorShips']);
     Route::get('/get/{Id}', [SponsorshipController::class, 'getSponsorshipDetails']);
     Route::get('/category/{categoryId}', [SponsorshipController::class, 'getSponsorshipsByCategory']);
-    Route::get('byStatus/category/{categoryId}', [SponsorshipController::class, 'getSponsorShipsByStatus']);
+    Route::get('category/{categoryId}/byStatus/{status}', [SponsorshipController::class, 'getSponsorShipsByStatus']);
     Route::get('byCreationDate', [SponsorshipController::class, 'getAllSponsorshipsByCreationDate']);
-    Route::get('getCancelled', [SponsorshipController::class, 'getCancelledSponsorships']);
+    Route::get('/getCancelled', [SponsorshipController::class, 'getCancelledSponsorships']);
     });
 
 Route::prefix('plans')->group(function () {

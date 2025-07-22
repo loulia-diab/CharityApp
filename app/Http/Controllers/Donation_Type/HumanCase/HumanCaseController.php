@@ -673,8 +673,6 @@ class HumanCaseController extends Controller
         }
     }
 
-
-
     public function getHumanCasesByCreationDate(Request $request)
     {
         $admin = auth('admin')->user();
@@ -1008,7 +1006,7 @@ class HumanCaseController extends Controller
                         'start_date' => $campaign->start_date,
                         'end_date' => $campaign->end_date,
                     ];
-                });
+                })->values();
 
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم جلب الحالات الإنسانية بنجاح' : 'Human cases fetched successfully',
@@ -1063,7 +1061,7 @@ class HumanCaseController extends Controller
                         'collected_amount' => $campaign->collected_amount,
                         'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
                     ];
-                });
+                })->values();
 
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم جلب الحالات حسب التصنيف بنجاح' : 'Human cases by category fetched successfully',

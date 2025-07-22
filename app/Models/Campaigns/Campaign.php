@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\HumanCase;
 use App\Models\Sponsorship;
 use App\Models\Volunteer;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Campaign extends Model
@@ -32,7 +33,17 @@ class Campaign extends Model
             }
         });
     }
+    // تحويل created_at لتوقيت دمشق
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
+    }
 
+    // تحويل updated_at لتوقيت دمشق
+    public function getUpdatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
+    }
     protected $appends = ['remaining_amount', 'status_label'];
 
     public function getRemainingAmountAttribute()

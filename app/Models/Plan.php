@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RecurrenceType;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Plan extends Model
@@ -34,5 +35,16 @@ class Plan extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    // Accessors to format date on Damascus time
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
+    }
+
+    public function getUpdatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
     }
 }

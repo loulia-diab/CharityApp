@@ -15,24 +15,16 @@ return new class extends Migration
 
         Schema::create('sponsorships', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('campaign_id')
-                ->nullable()
-                ->constrained()
-                ->onDelete('cascade');
-
-            $table->foreignId('beneficiary_id')
-                ->constrained()
-                ->onDelete('cascade');
-
+            $table->foreignId('campaign_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('beneficiary_id')->constrained()->onDelete('cascade');
+            $table->boolean('is_permanent')->default(false);
             $table->timestamps();
             $table->text('cancelled_note')->nullable();
             $table->timestamp('cancelled_at')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
+
     public function down(): void
     {
         Schema::dropIfExists('sponsorships');

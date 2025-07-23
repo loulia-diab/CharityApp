@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Beneficiary extends Model
@@ -38,4 +39,15 @@ class Beneficiary extends Model
     {
         return $this->hasMany(Sponsorship::class);
     }
+// Accessors to format date on Damascus time
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
+    }
+
+    public function getUpdatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
+    }
+
 }

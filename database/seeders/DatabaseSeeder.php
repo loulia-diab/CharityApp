@@ -31,5 +31,7 @@ class DatabaseSeeder extends Seeder
             BeneficiarySeeder::class, // بعده لربط المستفيدين
         ]);
         $this->call(HumanCaseSeeder::class);
+        $this->call(SponsorshipSeeder::class);
+
     }
 }

@@ -20,14 +20,12 @@ class HumanCaseSeeder extends Seeder
                 // غير الحقول حسب جدولك
             ]);
         }
-
         // دالة مساعدة لإنشاء الكاتيغوري وحملاته وحالاته
         $createCategoryWithCases = function ($mainCategory, $categoryNameEn, $categoryNameAr, $cases) use ($beneficiary) {
             $category = Category::updateOrCreate(
                 ['main_category' => $mainCategory, 'name_category_en' => $categoryNameEn],
                 ['name_category_ar' => $categoryNameAr]
             );
-
             foreach ($cases as $case) {
                 $campaign = Campaign::updateOrCreate(
                     [
@@ -44,8 +42,7 @@ class HumanCaseSeeder extends Seeder
                         'status' => $case['status'] ?? \App\Enums\CampaignStatus::Active,
                         'category_id' => $category->id,
                         'image' => $case['image'] ?? null,
-                        'start_date' => '2025-07-17',
-                        'end_date' => '2025-08-17',
+
                     ]
                 );
 
@@ -71,7 +68,8 @@ class HumanCaseSeeder extends Seeder
                 'description_ar' => "نُقلت الخالة غزالة بشكل إسعافي إلى مستشفى الشفاء في إدلب إثر احتشاء عضلة قلبية، وهي الآن بحاجة عاجلة لزراعة شبكة دوائية بتكلفه تفوق قدرة العائلة. تعيش الخالة في منزل بسيط متضرر من القصف، وزوجها مريض، وابنها الأكبر طريح الفراش بسبب السكري، كما لدى العائلة أربعة أبناء من ذوي الاحتياجات الخاصة. دخل الأسرة المتواضع لا يكفي لتأمين العلاج أو احتياجاتهم الأساسية، ونأمل أن تساهموا في إنقاذ حياة الخالة وتخفيف معاناتهم.",
                 'collected_amount' => 0,
                 'image'=>"human_case_images/Ghazala.jpg",
-                'is_emergency'=>true
+                'is_emergency'=>true,
+                'status'=>\App\Enums\CampaignStatus::Active->value,
             ],
             [
                 'title_en' => "Mahmoud's Last Hope",
@@ -79,9 +77,9 @@ class HumanCaseSeeder extends Seeder
                 'goal_amount' => 323,
                 'title_ar' => 'لا تتركوا محمود يُكسر مرتين…',
                 'description_ar' => "سنوات من الاعتقال قضى فيها عمره خلف القضبان… خرج بجسد مُنهك، لكنه ما استسلم. حاول يبدأ من جديد، يشتغل، يعيش. لكن حادث مأساوي وهو بالعمل، كسر ساقه اليسرى وعظم ترقوته. واليوم، هو بحاجة لعملية عاجلة لتركيب صفيحة تشريحية… وكل تأخير يهدد مشيه، وكرامته، وحياته. لكن العجز المادي واقف بينه وبين غرفة العمليات… ساعدوا محمود، قبل ما ينهار جسده مثل ما انهارت سنين عمره خلف القضبان. كونوا أمله الأخير.",
-                'collected_amount' => 0,
+                'collected_amount' => 323,
                 'image'=>"human_case_images/Mahmoud.jpg",
-                'status' => \App\Enums\CampaignStatus::Archived
+                'status' => \App\Enums\CampaignStatus::Archived->value
 
             ],
             [
@@ -91,7 +89,8 @@ class HumanCaseSeeder extends Seeder
                 'title_ar' => 'فتحةٌ قلبية ألزمتها المشفى!',
                 'description_ar' => "بعد شهور من الانتظار، وُلدت شام لتنير حياة أسرتها، لكنها جاءت بفتحة قلبية وأُصيبت بإنتان رئوي ألزمها المستشفى بعيدًا عن حضن أمها ودفء عائلتها. سعى والد شام جاهدًا لتأمين علاجها في مستشفى مجاني، ونجح في ذلك، لكن تكاليف الأدوية والتنقّل تُرهق أسرة بالكاد تؤمّن قوت يومها، بدخل لا يكفي أبسط احتياجاتها. تحتاج شام اليوم رعايتكم لتعود سالمة إلى حضن عائلتها المنتظرة. فهلّا كنتم السند؟",
                 'collected_amount' => 100,
-                'image'=>"human_case_images/baby.jpg"
+                'image'=>"human_case_images/baby.jpg",
+                'status'=>\App\Enums\CampaignStatus::Active->value,
             ],
             [
 
@@ -101,7 +100,8 @@ class HumanCaseSeeder extends Seeder
                 'title_ar' => "حروقٌ مؤلمة وطفولةٌ مهددة",
                 'description_ar' => "لم تكن مها تتخيلُ أنَّ لحظةً إعداد الطعام لإخوتها ستغيّر مجرى حياتها. انفجارٌ مفاجئ في جرة الغاز سبّب لها حروقًا بليغة في وجهها وصدرها، وأدخلها في دوامة من الألم والعلاج لأكثرَ من عشرة أيام قضتها في المشفى بعيدةً عن بيتها وإخوتها، تصارع الألم والخوف من أن تترك هذه الحروق أثرًا دائمًا على ملامحها. الصدمة لم تكن لمها وحدها، بل لعائلةٍ منهكةٍ أصلًا، تعيش في بيتٍ متواضع وتعتمد على دخلٍ بسيط لا  يكفيهم للطعام فكيف بعلاجٍ طويلٍ ومكلف.",
                 'collected_amount' => 100,
-                'image'=>"human_case_images/Maha.jpg"
+                'image'=>"human_case_images/Maha.jpg",
+                'status'=>\App\Enums\CampaignStatus::Active->value,
             ]
 
         ];
@@ -110,8 +110,8 @@ class HumanCaseSeeder extends Seeder
 
 
         // ====== Student =======
-        $studentCategoryNameEn = 'Student';
-        $studentCategoryNameAr = 'طلاب';
+      //  $studentCategoryNameEn = 'Student';
+      //  $studentCategoryNameAr = 'طالب علم';
 
         $studentCases = [
             [
@@ -120,8 +120,9 @@ class HumanCaseSeeder extends Seeder
                 'description_en' => "Shahd is in her second year of studying Health Sciences. She lives in a humble room with her younger siblings, with no guardian to support them. Their father was arrested in 2011, and after the prison was liberated, all they found of him were his documents in Saydnaya Prison. Their mother abandoned them and remarried, leaving Shahd and her siblings to face harsh psychological and financial struggles alone. Despite all the pain, Shahd still dreams of finishing her education so she can become a pillar of support for her brothers and sisters. Your donation today could change the future of an entire family.",
                 'description_ar' => "شهد، طالبة في السنة الثانية علوم صحية، تعيش مع إخوتها الصغار في غرفة متواضعة بلا معيل. اعتُقل والدهم عام 2011، ولم يجدوا منه سوى أوراقه في سجن صيدنايا بعد التحرير. والدتهم تخلت عنهم وتزوجت، فواجهوا ضغوطاً نفسية وحياتية قاسية. رغم الألم، تحلم شهد بإكمال تعليمها لتصبح سنداً لإخوتها. تبرعك اليوم قد يغيّر مستقبل عائلة كاملة.",
                 'goal_amount' => 500,
-                'collected_amount' => 0,
-                'image'=>"human_case_images/Shahd.jpg"
+                'collected_amount' => 500,
+                'image'=>"human_case_images/Shahd.jpg",
+                'status'=>\App\Enums\CampaignStatus::Archived->value,
             ],
             [
                 'title_en' => 'Ahmad, a university student, is in need for your help.',
@@ -130,7 +131,9 @@ class HumanCaseSeeder extends Seeder
                 'description_ar' => "أحمد، شاب من مدينة الباب، أُصيب عام 2016 إصابة خطيرة أدت لشلل نصفي، وفقد والده عام 2017 بانفجار مدفأة، ثم والدته بالقصف بعد عام. لم يتوقف الألم، فاستشهد زوج شقيقته وترك خلفه طفلين، ليحمل أحمد وأخوه عبء عائلة مكلومة. رغم كل المعاناة، أصر على استكمال تعليمه ونال البكالوريا عام 2023. اليوم، يواجه صعوبة في دفع قسطه الجامعي ويضطر للاستدانة كل عام. بدعمكم، يمكن لحلمه أن يستمر",
                 'goal_amount' => 333,
                 'collected_amount' => 0,
-                'image'=>"human_case_images/Ahmad.jpg"
+                'image'=>"human_case_images/Ahmad.jpg",
+                'is_emergency' => true,
+                'status'=>\App\Enums\CampaignStatus::Active->value,
             ],
             [
                 'title_en' => 'Walaa, a student affected by the earthquake, needs your support!',
@@ -139,11 +142,12 @@ class HumanCaseSeeder extends Seeder
                 'description_ar' => "الطالبة من عائلة مكونة من ٦ بنات كلهن طالبات الوالد متضرر من الزلزال في ظهره واجريه ويصعب عليه العمل والطالبة عندها مشاكل صحية كثيرة تعاني من ديسك في الظهر.ولا يمكنها العمل ولا يوجد اي معيل للعائلة",
                 'goal_amount' => 567,
                 'collected_amount' => 200,
-                'image'=>"human_case_images/Walaa.jpg"
+                'image'=>"human_case_images/Walaa.jpg",
+                'status'=>\App\Enums\CampaignStatus::Active->value,
             ],
         ];
 
-        $createCategoryWithCases('Student', $studentCategoryNameEn, $studentCategoryNameAr, $studentCases);
+        $createCategoryWithCases('HumanCase', 'Student', 'طالب علم', $studentCases);
 
 
         // ====== Needy Families =======
@@ -158,7 +162,8 @@ class HumanCaseSeeder extends Seeder
                 'description_ar' => "وسط غرفة ضيقة لا تكاد تقي من حرّ الصيف ولا برد الشتاء، تقيم الأخت حنان مع أطفالها في أحد المخيمات شمال سوريا منذ تهجيرهم. حنان أرملة بلا معيل ولا سند، تعيش على مساعدات الآخرين، وتحاول جاهدة تأمين احتياجات صغارها، إلا أن الفقر وقلة الحيلة وقفت في طريقها. طفلتها الصغيرة تعاني من آثار حروق قديمة تركت إعاقات ظاهرة، وحنان عاجزة حتى عن تأمين وسيلة لنقلها إلى قريتهم. الوضع يزداد سوءًا، وحنان تحتاج لقلوبٍ رحيمة تُمكّنها من العودة إلى قريتها ومداواة ألم سنينها. كونوا عوناً لها.",
                 'goal_amount' => 369,
                 'collected_amount' => 369,
-                'image'=>"human_case_images/Hanan.jpg"
+                'image'=>"human_case_images/Hanan.jpg",
+                'status'=>\App\Enums\CampaignStatus::Active->value,
             ],
             [
                 'title_en' => "They Can’t Leave the Camp",
@@ -167,7 +172,8 @@ class HumanCaseSeeder extends Seeder
                 'description_ar' => "وسط مخيم يفتقر لأبسط مقومات الحياة، تقيم الخالة أم محمد في غرفة سقفها جادر، لا تقي حرّ الصيف ولا برد الشتاء. شظايا صاروخ أصابت قدمها ومنعتها من العمل، وزوجها المُسنّ عاجز عن إعالتهم. فقدت اثنين من أبنائها، وتعتني اليوم بأحفادها وزوجة أحد أبنائها، ويضطرون لبيع ما يصلهم من مساعدات إنسانية لتأمين الطعام والدواء… بعد تحرير قريتهم، عادت الخالة أم محمد إلى بيتها، فوجدته ركاماً. كل ما تريده الآن هو العودة للعيش قرب أقاربها، لكنها لا تملك حتى ثمن المواصلات أو تسديد ديون تراكمت عليها… لنكن عونا للخالة أم محمد وعائلتها ولنساعدهم على تخطي أزمتهم",
                 'goal_amount' => 400,
                 'collected_amount' => 0,
-                'image'=>"human_case_images/Camp.jpg"
+                'image'=>"human_case_images/Camp.jpg",
+                'status'=>\App\Enums\CampaignStatus::Active->value,
             ],
             [
                 'title_en' => "Years have weighed him down and robbed him of his strength!",
@@ -175,11 +181,14 @@ class HumanCaseSeeder extends Seeder
                 'description_en' => "Displacement forced Abu Muhammad to leave his home, finding himself in an old room that barely serves as a kitchen and sleeping space, devoid of essentials and containing only simple bedding that is hardly sufficient. Abu Muhammad, burdened by the years, is no longer able to work or provide for himself, and debts have accumulated upon him. Today, he sits hoping to return to his destroyed home after liberation, but the travel costs alone stand as an obstacle before him. Let us be a support for Abu Muhammad and his family in this difficult crisis!!",
                 'description_ar' => "أجبرَ النزوح العم أبو محمد على ترك منزله، ليجد نفسه في غرفة قديمة لا تتعدى كونها مطبخًا ومكانًا للنوم، خالية من الأساسيات، ولا تحتوي إلّا على فرشٍ بسيط بالكاد يكفي… العم أبو محمد، الذي أثقلته السنين، لم يعد قادرًا على العمل أو توفير ما يسد رمقه، وتراكمت عليه الديون. اليوم، يجلس على أمل العودة إلى منزله المدمر بعد التحرير، لكن تكاليف الطريق وحدها تقف عائقًا أمامه… لنكن عونا للعم أبو محمد وعائلته في هذه الأزمة الصعبة!!",
                 'goal_amount' => 300,
-                'collected_amount' => 0,
-                'image'=>"human_case_images/Years.jpg"
+                'collected_amount' => 120,
+                'image'=>"human_case_images/Years.jpg",
+                'is_emergency' => true,
+                'status'=>\App\Enums\CampaignStatus::Active->value,
+
             ],
         ];
 
-        $createCategoryWithCases('Needy Families', $needyCategoryNameEn, $needyCategoryNameAr, $needyCases);
+        $createCategoryWithCases('HumanCase', 'Needy Families', 'أسر متعففة', $needyCases);
     }
 }

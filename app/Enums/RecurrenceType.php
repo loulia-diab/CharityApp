@@ -3,17 +3,19 @@
 namespace App\Enums;
 
 enum RecurrenceType: string
+
 {
     case Daily = 'daily';
+    case Weekly = 'weekly';
     case Monthly = 'monthly';
-    case Yearly = 'yearly';
-
     public function label(string $locale = 'en'): string
     {
         return match ($this) {
+
             self::Daily => $locale === 'ar' ? 'يومي' : 'Daily',
+            self::Weekly=> $locale === 'ar' ? 'أسبوعي' : 'Weekly',
             self::Monthly => $locale === 'ar' ? 'شهري' : 'Monthly',
-            self::Yearly => $locale === 'ar' ? 'سنوي' : 'Yearly',
+
         };
     }
 

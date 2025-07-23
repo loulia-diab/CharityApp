@@ -9,6 +9,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Faker\Factory as Faker;
 
+
 class BeneficiaryRequestSeeder extends Seeder
 {
     /**
@@ -18,11 +19,9 @@ class BeneficiaryRequestSeeder extends Seeder
     {
         $faker = Faker::create();
 
-        // نحصل على ids عشوائية للمستخدمين والادمنز، أو null لو ما في
         $userIds = User::pluck('id')->toArray();
         $adminIds = Admin::pluck('id')->toArray();
 
-        // عدد السجلات الوهمية اللي بدك تنشئها
         $count = 20;
 
         for ($i = 0; $i < $count; $i++) {
@@ -42,7 +41,7 @@ class BeneficiaryRequestSeeder extends Seeder
                 'gender_ar' => $faker->randomElement(['ذكر', 'أنثى']),
                 'gender_en' => $faker->randomElement(['male', 'female']),
 
-                'birth_date' => $faker->date($format = 'Y-m-d', $max = '2005-01-01'),
+                'birth_date' => $faker->date('Y-m-d', '2005-01-01'),
 
                 'marital_status_ar' => $faker->randomElement(['أعزب', 'متزوج', 'مطلق', 'أرمل']),
                 'marital_status_en' => $faker->randomElement(['single', 'married', 'divorced', 'widowed']),
@@ -52,7 +51,7 @@ class BeneficiaryRequestSeeder extends Seeder
                 'study_ar' => $faker->randomElement(['ثانوي', 'جامعي', 'ابتدائي', 'لا يوجد']),
                 'study_en' => $faker->randomElement(['high school', 'university', 'primary', 'none']),
 
-                'has_job' => $faker->boolean(50),
+                'has_job' => $faker->boolean,
 
                 'job_ar' => $faker->jobTitle,
                 'job_en' => $faker->jobTitle,
@@ -60,7 +59,7 @@ class BeneficiaryRequestSeeder extends Seeder
                 'housing_type_ar' => $faker->randomElement(['ملك', 'إيجار', 'مؤقت']),
                 'housing_type_en' => $faker->randomElement(['owned', 'rented', 'temporary']),
 
-                'has_fixed_income' => $faker->boolean(50),
+                'has_fixed_income' => $faker->boolean,
                 'fixed_income' => $faker->randomFloat(2, 0, 5000),
 
                 'address_ar' => $faker->address,
@@ -68,8 +67,10 @@ class BeneficiaryRequestSeeder extends Seeder
 
                 'phone' => $faker->phoneNumber,
 
+
                 'main_category_ar' => 'حالة انسانية',  // حسب طلبك
                 'main_category_en' => 'HumanCase',  // حسب طلبك
+
 
                 'sub_category_ar' => $faker->randomElement(['صحة', 'تعليم', 'بناء']),
                 'sub_category_en' => $faker->randomElement(['medical', 'education', 'housing']),
@@ -82,7 +83,14 @@ class BeneficiaryRequestSeeder extends Seeder
 
                 'reason_of_rejection_ar' => $faker->boolean(20) ? $faker->sentence : null,
                 'reason_of_rejection_en' => $faker->boolean(20) ? $faker->sentence : null,
+
+                'priority_ar' => $faker->randomElement(['عادية', 'متوسطة', 'عالية']),
+                'priority_en' => $faker->randomElement(['normal', 'medium', 'high']),
+
+                'is_sorted' => $faker->boolean,
+                'is_read_by_admin' => false,
             ]);
         }
     }
 }
+

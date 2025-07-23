@@ -21,6 +21,8 @@ class UserController extends Controller
             'name' => $user->name,
             'phone' => $user->phone,
             'profile_image' => $user->profile_image ? asset('storage/' . $user->profile_image) : null,
+            'email' => $user->email,
+            'balance' => $user->balance,
         ];
         return response()->json([
             'message' => 'User profile',

@@ -52,4 +52,9 @@ class Admin extends Authenticatable
         return $this->hasMany(Category::class);
     }
 
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class, 'admin_id');
+    }
+
 }

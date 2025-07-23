@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\admin\AdminAuthController;
+use App\Http\Controllers\admin\AdminController;
 use App\Http\Controllers\beneficiary\BeneficiaryController;
 use App\Http\Controllers\beneficiary\BeneficiaryRequestController;
 use App\Http\Controllers\Category\CategoryController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Donation_Type\Campaign\CampaignController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignFilterController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignVolunteerController;
 use App\Http\Controllers\Donation_Type\HumanCase\HumanCaseController;
+use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\user\PhoneAuthController;
 use App\Http\Controllers\user\UserAuthController;
@@ -23,15 +25,15 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 
-
-Route::middleware('auth:sanctum')
-    ->post('/setLanguage', [LanguageController::class, 'setLanguage']);
-
-
 // Routes for user
 Route::prefix('user')->group(function () {
     Route::post('/register', [UserAuthController::class, 'register']);
     Route::post('/login', [UserAuthController::class, 'login']);
+    Route::post('/resetPassword', [UserAuthController::class, 'resetPassword']);
+  //  Route::get('/googleLogin', [GoogleController::class, 'googleLogin']);
+  //  Route::get('/google_callback', [GoogleController::class, 'handleGoogleCallback'])->middleware('checkLanguage');
+    Route::post('/google', [GoogleController::class, 'loginWithGoogle']);
+
 
     Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
         Route::post('/logout', [UserAuthController::class, 'logout']);
@@ -39,13 +41,6 @@ Route::prefix('user')->group(function () {
         Route::post('/updateProfile', [UserController::class, 'updateProfile']);
         Route::post('/changePassword', [UserController::class, 'changePassword']);
     });
-});
-
-Route::prefix('otp')->group(function () {
-Route::post('/otp/send-login', [PhoneAuthController::class, 'sendLoginOtp']);
-Route::post('/otp/send-reset', [PhoneAuthController::class, 'sendPasswordResetOtp']);
-Route::post('/otp/verify', [PhoneAuthController::class, 'verifyOtp']);
-Route::post('/password/reset', [PhoneAuthController::class, 'resetPassword']);
 });
 
 // Routes for admin
@@ -57,10 +52,13 @@ Route::prefix('admin')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
+        Route::post('/changePassword', [AdminController::class, 'changePassword']);
     });
 });
 
 Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
+
+    Route::post('/setLanguage', [LanguageController::class, 'setLanguage']);
 
 Route::prefix('volunteer_request')->group(function () {
     Route::post('/add', [VolunteerRequestController::class, 'addVolunteerRequest']);
@@ -77,8 +75,8 @@ Route::prefix('beneficiary_request')->group(function () {
     Route::get('/getFilterByStatus', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByStatusForAdmin']);
     Route::get('/getUnreadRequests', [BeneficiaryRequestController::class, 'getUnreadBeneficiaryRequests']);
     Route::post('/updateStatus/{id}', [BeneficiaryRequestController::class, 'updateBeneficiaryRequestStatus']);
-    Route::get('/getFilterByPriority', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByPriority']);
-    Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
+  //  Route::get('/getBeneficiariesByPriority', [BeneficiaryRequestController::class, 'getBeneficiariesByPriority']);
+  //  Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
 });
 Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);

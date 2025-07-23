@@ -18,6 +18,9 @@ class User extends Authenticatable
         'password',
         'profile_image',
         'preferred_language',
+        'google_id',
+        'email',
+        'balance',
     ];
 
     protected $hidden = [
@@ -52,5 +55,25 @@ class User extends Authenticatable
     public function plans()
     {
         return $this->hasMany(Plan::class);
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function donations()
+    {
+        return $this->hasMany(Transaction::class)->where('type', 'donation');
+    }
+
+    public function recharges()
+    {
+        return $this->hasMany(Transaction::class)->where('type', 'recharge');
+    }
+
+    public function gifts()
+    {
+        return $this->hasMany(Gift::class);
     }
 }

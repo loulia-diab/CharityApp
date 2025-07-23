@@ -42,8 +42,6 @@ class HumanCaseSeeder extends Seeder
                         'status' => $case['status'] ?? \App\Enums\CampaignStatus::Active,
                         'category_id' => $category->id,
                         'image' => $case['image'] ?? null,
-                        'start_date' => '2025-07-17',
-                        'end_date' => '2025-08-17',
 
                     ]
                 );

@@ -198,8 +198,6 @@ class HumanCaseController extends Controller
                 'category_id' => $request->category_id,
                 'goal_amount' => $request->goal_amount ?? 0,
                 'collected_amount' => 0,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
                 'status' => $request->status ?? CampaignStatus::Pending,
                 'image' => '', // بدون صورة في البداية
             ]);
@@ -406,8 +404,6 @@ class HumanCaseController extends Controller
                     "{$descField} as description",
                     'goal_amount',
                     'collected_amount',
-                    'start_date',
-                    'end_date',
                     'image',
                     'status'
                 );
@@ -437,8 +433,6 @@ class HumanCaseController extends Controller
                 'goal_amount' => $campaign->goal_amount,
                 'collected_amount' => $campaign->collected_amount,
                 'remaining_amount'=>$campaign->remaining_amount,
-                'start_date' => $campaign->start_date,
-                'end_date' => $campaign->end_date,
                 'status_label' => $campaign->status_label,
                 'image' => $campaign->image,
             ],
@@ -500,8 +494,6 @@ class HumanCaseController extends Controller
                         'category_id' => $campaign ? $campaign->category_id : null,
                         'goal_amount' => $campaign ? $campaign->goal_amount : null,
                         'collected_amount' => $campaign ? $campaign->collected_amount : null,
-                        'start_date' => $campaign ? $campaign->start_date : null,
-                        'end_date' => $campaign ? $campaign->end_date : null,
                         'status' => $campaign ? $campaign->status : null,
                         'image' => $campaign ? $campaign->image : null,
                     ];
@@ -645,8 +637,6 @@ class HumanCaseController extends Controller
                         'category_id' => $campaign->category_id,
                         'goal_amount' => $campaign->goal_amount,
                         'collected_amount' => $campaign->collected_amount,
-                        'start_date' => $campaign->start_date,
-                        'end_date' => $campaign->end_date,
                         'status' => $campaign->status,
                         'image' => $campaign->image,
                         'status_label' => $campaign->status->label($locale),
@@ -758,8 +748,6 @@ class HumanCaseController extends Controller
                         'category_id' => $campaign->category_id,
                         'goal_amount' => $campaign->goal_amount,
                         'collected_amount' => $campaign->collected_amount,
-                        'start_date' => $campaign->start_date,
-                        'end_date' => $campaign->end_date,
                         'image' => $campaign->image,
                         'status_label' => $campaign->status->label($locale),
                     ];
@@ -906,8 +894,6 @@ class HumanCaseController extends Controller
                     'category_id',
                     'goal_amount',
                     'collected_amount',
-                    'start_date',
-                    'end_date',
                     'status',
                     'image',
                     "{$titleField} as title",
@@ -936,8 +922,6 @@ class HumanCaseController extends Controller
                     'category_id' => $campaign?->category_id,
                     'goal_amount' => $campaign?->goal_amount,
                     'collected_amount' => $campaign?->collected_amount,
-                    'start_date' => $campaign?->start_date,
-                    'end_date' => $campaign?->end_date,
                     'image' => $campaign?->image,
                 ];
             });
@@ -987,8 +971,7 @@ class HumanCaseController extends Controller
                         'image',
                         'goal_amount',
                         'collected_amount',
-                        'start_date',
-                        'end_date'
+
                     );
             }])->get()
                 ->filter(fn($humanCase) => $humanCase->campaign !== null)
@@ -1003,8 +986,7 @@ class HumanCaseController extends Controller
                         'goal_amount' => $campaign->goal_amount,
                         'collected_amount' => $campaign->collected_amount,
                         'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
-                        'start_date' => $campaign->start_date,
-                        'end_date' => $campaign->end_date,
+
                     ];
                 })->values();
 
@@ -1043,8 +1025,6 @@ class HumanCaseController extends Controller
                         'image',
                         'goal_amount',
                         'collected_amount',
-                        'start_date',
-                        'end_date'
                     );
             }])
                 ->get()
@@ -1098,8 +1078,7 @@ class HumanCaseController extends Controller
                         'image',
                         'goal_amount',
                         'collected_amount',
-                        'start_date',
-                        'end_date'
+
                     );
             }])->with('beneficiary')->find($id);
 
@@ -1289,8 +1268,7 @@ class HumanCaseController extends Controller
                     'category_id' => $campaign?->category_id,
                     'goal_amount' => $campaign?->goal_amount,
                     'collected_amount' => $campaign?->collected_amount,
-                    'start_date' => $campaign?->start_date,
-                    'end_date' => $campaign?->end_date,
+
                     'image' => $campaign?->image,
                 ];
             });

@@ -627,7 +627,7 @@ class SponsorshipController extends Controller
             $locale = app()->getLocale();
 
             $sponsorships = Sponsorship::with('campaign.category', 'beneficiary')
-                ->where('is_permanent', true) // على جدول الكفالة مباشرة
+                ->where('is_permanent', false) // على جدول الكفالة مباشرة
                 ->whereHas('campaign', function ($query) use ($mainCategory) {
                     $query->whereHas('category', function ($q) use ($mainCategory) {
                         $q->where('main_category', $mainCategory);
@@ -683,17 +683,22 @@ class SponsorshipController extends Controller
                 ->firstOrFail();
 
             $campaign = $sponsorship->campaign;
+            $category = $campaign?->category;
+            $beneficiary = $sponsorship->beneficiary->beneficiary_request;
 
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم جلب الكفالة بنجاح' : 'Visible sponsorship fetched successfully',
                 'data' => [
                     'id' => $sponsorship->id,
                     'category_id' => $campaign?->category_id,
+                    'category_name' => $locale === 'ar' ? ($category?->name_category_ar ?? '') : ($category?->name_category_en ?? ''),
                     'title' => $locale === 'ar' ? $campaign?->title_ar : $campaign?->title_en,
                     'description' => $locale === 'ar' ? $campaign?->description_ar : $campaign?->description_en,
                     'monthly_amount' => $campaign?->goal_amount,
                     'remaining_amount' => max(0, $campaign?->goal_amount - $campaign?->collected_amount),
                     'image' => $campaign?->image,
+                    'beneficiary_gender' => $locale === 'ar' ? ($beneficiary?->gender_ar ?? '') : ($beneficiary?->gender_en ?? ''),
+                    'beneficiary_birth_date' => $beneficiary?->birth_date ?? null,
                 ],
                 'status' => 200,
             ]);
@@ -711,6 +716,7 @@ class SponsorshipController extends Controller
             ]);
         }
     }
+
 
     public function getVisibleSponsorshipsByCategoryForUsers($mainCategory, $categoryId)
     {

@@ -155,6 +155,8 @@ Route::prefix('plans')->group(function () {
     Route::post('/create/forSponsorship/{sponsorshipId}', [PlanController::class,'createPlanForSponsorship']);
     Route::post('/deactivate/{PlanId}', [PlanController::class, 'deactivatePlan']);
     Route::post('/activate/{PlanId}', [PlanController::class, 'activatePlan']);
+    Route::post('/createAndActiveRecurring', [PlanController::class,'createPlanForSponsorship']);
+
     // كفالاتي
     Route::get('/getAll', [PlanController::class, 'getSponsorshipPlansForUser']);
     //  تبرعي الدوري

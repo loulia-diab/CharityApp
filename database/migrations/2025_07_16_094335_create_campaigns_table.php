@@ -21,8 +21,8 @@ return new class extends Migration
             $table->longText('description_en');
             $table->longText('description_ar');
             $table->string('status');
-            $table->double('goal_amount')->default(0);
-            $table->double('collected_amount')->default(0);
+            $table->decimal('goal_amount')->default(0);
+            $table->decimal('collected_amount')->default(0);
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->timestamp('completed_at')->nullable();

@@ -116,5 +116,60 @@ class BeneficiaryController extends Controller
             'status' => 200
         ]);
     }
+    public function getBeneficiarySponsorships($beneficiaryId)
+    {
+        $user = null;
+        $admin = null;
+        if (auth()->guard('admin')->check()) {
+            $admin = auth()->guard('admin')->user();
+        } elseif (auth()->guard('api')->check()) {
+            $user = auth()->guard('api')->user();
+        } else {
+            return response()->json([
+                'message' => app()->getLocale() === 'ar' ? 'غير مصرح' : 'Unauthorized',
+                'status' => 401
+            ], 401);
+        }
+        $beneficiary = Beneficiary::find($beneficiaryId);
+
+        $locale = app()->getLocale();
+
+        if (!$beneficiary) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'المستفيد غير موجود' : 'Beneficiary not found',
+                'status' => 404
+            ], 404);
+        }
+
+        $titleField = "title_{$locale}";
+        $descField = "description_{$locale}";
+
+        $sponsorships = \App\Models\Sponsorship::with(['campaign.category'])
+            ->where('beneficiary_id', $beneficiaryId)
+            ->whereHas('campaign.category', function ($q) {
+                $q->where('main_category', 'Sponsorship');
+            })
+            ->get()
+            ->map(function ($sponsorships) use ($titleField, $descField) {
+                $campaign = $sponsorships->campaign;
+
+                return [
+                    'id' => $sponsorships->id,
+                    'title' => $campaign?->getAttribute($titleField),
+                    'description' => $campaign?->getAttribute($descField),
+                    'category_id' => $campaign?->category_id,
+                    'image' => $campaign?->image,
+                    'start_date' => $campaign?->start_date,
+                    'end_date' => $campaign?->end_date,
+                ];
+            });
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم جلب الكفالات الخاصة بالمستفيد بنجاح' : 'Beneficiary sponsorships fetched successfully',
+            'data' => $sponsorships,
+            'status' => 200
+        ]);
+        // getBeneficiaryInKinds
+    }
 
 }

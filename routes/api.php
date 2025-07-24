@@ -9,6 +9,8 @@ use App\Http\Controllers\Donation_Type\Campaign\CampaignController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignFilterController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignVolunteerController;
 use App\Http\Controllers\Donation_Type\HumanCase\HumanCaseController;
+use App\Http\Controllers\Donation_Type\InKind\InKindBeneficiaryController;
+use App\Http\Controllers\Donation_Type\InKind\InKindController;
 use App\Http\Controllers\Donation_Type\Sponsorship\PlanController;
 use App\Http\Controllers\Donation_Type\Sponsorship\SponsorshipController;
 use App\Http\Controllers\LanguageController;
@@ -101,18 +103,25 @@ Route::prefix('campaigns')->group(function () {
     Route::post('/activate/{Id}', [CampaignController::class, 'activateCampaign']);
     Route::post('/archive/{Id}', [CampaignController::class, 'archiveCampaign']);
     Route::get('/archivedCampaigns', [CampaignController::class, 'getArchivedCampaigns']);
+
     // not used yet
     Route::get('/filter/byDate', [CampaignFilterController::class, 'filterCampaignsByDate']);
     Route::get('/filter/byGoalAmount', [CampaignFilterController::class, 'filterCampaignsByGoalAmount']);
     Route::get('/filter/byBeneficiariesCount', [CampaignFilterController::class, 'filterCampaignsByBeneficiariesCount']);
 
     //campaign with beneficiary
+    // اضافة مستفيد او اكتر لحملة معينة
     Route::post('/{campaignId}/addBeneficiaries', [CampaignBeneficiaryController::class, 'addBeneficiariesToCampaign']);
+    //  جلب مستفيدي الحملة المعينة
     Route::get('/{campaignId}/getBeneficiaries', [CampaignBeneficiaryController::class, 'getCampaignBeneficiaries']);
+    // حذف مستفيدين من حملة معينة
     Route::delete('/{campaignId}/deleteBeneficiaries/{beneficiaryId}', [CampaignBeneficiaryController::class, 'removeBeneficiaryFromCampaign']);
     //campaign with volunteer
+    // اضافة مطوعين لحملة
     Route::post('/{campaignId}/addVolunteers', [CampaignVolunteerController::class, 'addVolunteersToCampaign']);
+    // جلب كل المتطوعين لحملة
     Route::get('/{campaignId}/getVolunteers', [CampaignVolunteerController::class, 'getCampaignVolunteers']);
+    // حذف متطوعين من حملة
     Route::delete('/{campaignId}/deleteVolunteers/{volunteerId}', [CampaignVolunteerController::class, 'removeVolunteerFromCampaign']);
 });
 Route::prefix('humanCase')->group(function () {
@@ -143,32 +152,59 @@ Route::prefix('sponsorship')->group(function () {
         Route::get('byCreationDate', [SponsorshipController::class, 'getAllSponsorshipsByCreationDate']);
         Route::get('getCancelled', [SponsorshipController::class, 'getCancelledSponsorships']);
     });
+Route::prefix('inKinds')->group(function () {
+    // اضافة طلب تبرع عيني
+    Route::post('/add/for/user', [InKindController::class, 'addInKind']);
+    // تبرعاتي العينية
+    Route::get('/getAll/for/user', [InKindController::class, 'getAllUserInKinds']);
+    // يشوف الادمن حالات التبرع العيني
+    Route::get('/getAll/for/admin', [InKindController::class, 'getAllInKinds']);
+    // يشوف الادمن التبرعات العينية حسب الكاتيغوريات كلها
+    Route::get('/category/{categoryId}', [InKindController::class, 'getInKindsByCategory']);
+    // يشوف الادمن طلب التبرع لوحده
+    Route::get('/get/{inKindId}/for/admin', [InKindController::class, 'getInKindDetails']);
+    // قبول التبرع العيني وتسجيله ك ترانزاكشن
+    Route::post('/accept/for/admin', [InKindController::class, 'acceptInKind']);
+    // اضافة المستفيدين للتبرع العيني
+    Route::post('/{inKindId}/addBeneficiaries', [InKindBeneficiaryController::class, 'addBeneficiariesToInKind']);
+    // جلب المستفيدين من التبرع العيني
+    Route::get('/{inKindId}/getBeneficiaries', [InKindBeneficiaryController::class, 'getInKindBeneficiaries']);
 
+});
 
 // استفاداتي
 Route::get('/beneficiary/{beneficiaryId}/campaigns', [BeneficiaryController::class, 'getBeneficiaryCampaigns']);
 Route::get('/beneficiary/{beneficiaryId}/humanCases', [BeneficiaryController::class, 'getBeneficiaryHumanCases']);
+Route::get('/beneficiary/{beneficiaryId}/sponsorships', [BeneficiaryController::class, 'getBeneficiarySponsorships']);
+Route::get('/beneficiary/{beneficiaryId}/inKinds', [BeneficiaryController::class, 'getBeneficiaryInKinds']);
 // تطوعاتي
 Route::get('/volunteer/{volunteerId}/campaigns', [VolunteerController::class, 'getVolunteerCampaigns']);
-// الدوري (كفالة - تبرع دوري)
+// الدوري (كفالة)
 Route::prefix('plans')->group(function () {
     Route::post('/create/forSponsorship/{sponsorshipId}', [PlanController::class,'createPlanForSponsorship']);
-    Route::post('/deactivate/{PlanId}', [PlanController::class, 'deactivatePlan']);
-    Route::post('/activate/{PlanId}', [PlanController::class, 'activatePlan']);
-    Route::post('/createAndActiveRecurring', [PlanController::class,'createPlanForSponsorship']);
+    Route::post('/activate/{planId}', [PlanController::class, 'activatePlan']);
+    Route::post('/deactivate/{planId}', [PlanController::class, 'deactivatePlan']);
+    Route::post('/reactivate/{planId}', [PlanController::class, 'reactivatePlan']);
 
     // كفالاتي
-    Route::get('/getAll', [PlanController::class, 'getSponsorshipPlansForUser']);
-    //  تبرعي الدوري
-    Route::get('/get/{Id}', [PlanController::class, 'getPlanDetails']);
-
+    Route::get('/getAll/for/user', [PlanController::class, 'getSponsorshipPlansForUser']);
+    // خطط الكفالة للأدمن :الكفلاء المتبرعين
+    Route::get('/getAll/sponsorshipDonors', [PlanController::class, 'getSponsorshipsDonors']);
+    //  التبرع الدوري
+    Route::post('/activate/recurring/{planId}', [PlanController::class, 'activateRecurring']);
+    Route::post('/deactivate/recurring/{planId}', [PlanController::class, 'deactivateRecurring']);
+    Route::post('/activate/recurring/{planId}', [PlanController::class, 'reactivateRecurring']);
+// تبرعي الدوري
+    Route::get('/getAll/recurring/for/user', [PlanController::class, 'getRecurringPlan']);
+ // جلب خطط التبرع للمستخدمين
+    Route::get('/getAll/recurring/for/admin', [PlanController::class, 'getRecurringPlansDonors']);
 });
+
 
 });
 
 // NO AUTH FOR USER LIKE GUEST
 Route::prefix('category')->group(function () {
-  //  Route::get('/getAll/',[CategoryController::class,'getAllCategoriesForUser']);
     Route::get('/{main_category}', [CategoryController::class, 'getAllCategoriesByMainCategory']);
     Route::get('/{categoryId}/for/user', [CategoryController::class, 'getCategoryByIdForUser']);
 });

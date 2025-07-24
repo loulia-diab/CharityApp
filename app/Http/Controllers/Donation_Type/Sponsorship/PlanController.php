@@ -13,7 +13,7 @@ class PlanController extends Controller
 {
 
 // إنشاء خطة كفالة بدون تفعيل
-    public function createPlan($sponsorshipId)
+    public function createPlanForSponsorship($sponsorshipId)
     {
         $user = auth()->user();
 
@@ -147,6 +147,19 @@ class PlanController extends Controller
             'message' => $locale === 'ar' ? 'تم إعادة تفعيل الخطة' : 'Plan reactivated successfully',
         ]);
     }
+    // كفالاتي ك متبرع
+    public function getSponsorshipPlansForUser()
+    {
+
+    }
+    // عرض الكفلاء
+    public function getSponsorshipsDonors()
+    {
+
+    }
+
+    // التبرعات الدورية
+    // تفعيل
     public function activateRecurring(Request $request)
     {
         $request->validate([
@@ -224,6 +237,7 @@ class PlanController extends Controller
             ], 500);
         }
     }
+    // الغاء تفعيل
     public function deactivateRecurring($planId)
     {
         $user = auth()->user();
@@ -248,6 +262,7 @@ class PlanController extends Controller
             'message' => $locale === 'ar' ? 'تم إيقاف خطة التبرع العام' : 'General donation plan deactivated',
         ]);
     }
+    // اعادة تفعيل
     public function reactivateRecurring($planId)
     {
         $user = auth()->user();
@@ -294,5 +309,16 @@ class PlanController extends Controller
         ]);
     }
 
+    // تبرعي الدوري
+    public function getRecurringPlan()
+    {
+
+    }
+
+    // جلب خطط التبرع الدوري للأدمن
+    public function getRecurringPlansDonors()
+    {
+
+    }
 }
 

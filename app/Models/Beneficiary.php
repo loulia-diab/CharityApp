@@ -39,6 +39,13 @@ class Beneficiary extends Model
     {
         return $this->hasMany(Sponsorship::class);
     }
+
+    public function inKinds()
+    {
+        return $this->belongsToMany(InKind::class, 'in_kind_beneficiary');
+    }
+
+
 // Accessors to format date on Damascus time
     public function getCreatedAtAttribute($value)
     {

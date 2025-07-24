@@ -48,7 +48,7 @@ class BoxSeeder extends Seeder
         Box::create([
             'box_id' => $parent1Box->id,
             'name_ar' => 'كفارة يمين',
-            'name_en' => ' Expiation for Breaking an Oath',
+            'name_en' => 'Expiation for Breaking an Oath',
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Expiation_for_Breaking_an_Oath.jpg',
@@ -59,7 +59,7 @@ class BoxSeeder extends Seeder
         Box::create([
             'box_id' => $parent1Box->id,
             'name_ar' => 'وفاء نذر',
-            'name_en' => ' Fulfillment of a Vow',
+            'name_en' => 'Fulfillment of a Vow',
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Fulfillment_of_a_Vow.jpg',
@@ -70,7 +70,7 @@ class BoxSeeder extends Seeder
         Box::create([
             'box_id' => $parent1Box->id,
             'name_ar' => 'أضحية',
-            'name_en' => ' Sacrifice',
+            'name_en' => 'Sacrifice',
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Sacrifice.jpg',
@@ -81,7 +81,7 @@ class BoxSeeder extends Seeder
         Box::create([
             'box_id' => $parent1Box->id,
             'name_ar' => 'عقيقة',
-            'name_en' => ' Aqiqah',
+            'name_en' => 'Aqiqah',
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Aqiqah.jpg',
@@ -103,7 +103,7 @@ class BoxSeeder extends Seeder
         Box::create([
             'box_id' => $parent2Box->id,
             'name_ar' => 'دعم الفريق',
-            'name_en' => ' Support the Team',
+            'name_en' => 'Support the Team',
             'description_ar' => null,
             'description_en' => null,
             'image' => null,

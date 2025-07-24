@@ -14,6 +14,7 @@ use App\Http\Controllers\Donation_Type\HumanCase\HumanCaseController;
 use App\Http\Controllers\Donation_Type\Sponsorship\PlanController;
 use App\Http\Controllers\Donation_Type\Sponsorship\SponsorshipController;
 use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\user\GoogleController;
 use App\Http\Controllers\user\UserAuthController;
 use App\Http\Controllers\user\UserController;
@@ -36,12 +37,13 @@ Route::prefix('user')->group(function () {
   //  Route::get('/google_callback', [GoogleController::class, 'handleGoogleCallback'])->middleware('checkLanguage');
     Route::post('/google', [GoogleController::class, 'loginWithGoogle']);
 
-
     Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
         Route::post('/logout', [UserAuthController::class, 'logout']);
         Route::get('/showProfile', [UserController::class, 'showProfile']);
         Route::post('/updateProfile', [UserController::class, 'updateProfile']);
         Route::post('/changePassword', [UserController::class, 'changePassword']);
+        Route::get('/getAll', [UserController::class, 'getAllUsers']);
+        Route::get('/getMyRecharges', [UserController::class, 'getMyRecharges']);
     });
 });
 
@@ -83,6 +85,9 @@ Route::prefix('beneficiary_request')->group(function () {
     Route::post('/updateStatus/{id}', [BeneficiaryRequestController::class, 'updateBeneficiaryRequestStatus']);
   //  Route::get('/getBeneficiariesByPriority', [BeneficiaryRequestController::class, 'getBeneficiariesByPriority']);
   //  Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
+});
+Route::prefix('transaction')->group(function () {
+    Route::post('recharge', [TransactionController::class, 'rechargeUserBalance']);
 });
 
 Route::prefix('category')->group(function () {

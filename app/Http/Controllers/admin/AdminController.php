@@ -3,23 +3,43 @@
 namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
-{ /*
-    public function login(Request $request)
+{
+    public function changePassword(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
 
-        if (Auth::guard('admin')->attempt($credentials)) {
-            return redirect()->intended(route('admin.dashboard'));
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        return back()->withErrors(['email' => 'Invalid credentials']);
+        if (!Hash::check($request->current_password, $admin->password)) {
+            return response()->json([
+                'message' => 'كلمة المرور الحالية غير صحيحة'
+            ], 403);
+        }
+
+        if ($request->current_password === $request->new_password) {
+            return response()->json([
+                'message' => 'كلمة المرور الجديدة يجب أن تكون مختلفة عن الحالية'
+            ], 422);
+        }
+
+        $admin->update([
+            'password' => bcrypt($request->new_password),
+        ]);
+
+        return response()->json([
+            'message' => 'تم تغيير كلمة المرور بنجاح'
+        ]);
     }
 
-    public function logout(Request $request)
-    {
-        Auth::guard('admin')->logout();
-        return redirect()->route('admin.login');
-    }*/
 }

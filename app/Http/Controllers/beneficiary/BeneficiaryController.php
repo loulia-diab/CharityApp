@@ -4,6 +4,7 @@ namespace App\Http\Controllers\beneficiary;
 
 use App\Http\Controllers\Controller;
 use App\Models\Beneficiary;
+use Illuminate\Http\Request;
 
 class BeneficiaryController extends Controller
 {

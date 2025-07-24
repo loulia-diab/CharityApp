@@ -17,8 +17,11 @@ return new class extends Migration
             $table->string('phone')->unique();
             $table->timestamp('phone_verified_at')->nullable();
             $table->string('password');
+            $table->string('google_id')->nullable();
+            $table->string('email')->nullable();
             $table->string('profile_image')->nullable();
             $table->string('preferred_language')->nullable();
+            $table->decimal('balance', 10, 2)->default(0);
             $table->rememberToken();
             $table->timestamps();
         });

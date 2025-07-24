@@ -32,6 +32,6 @@ class DatabaseSeeder extends Seeder
         ]);
         $this->call(HumanCaseSeeder::class);
         $this->call(SponsorshipSeeder::class);
-
+        $this->call([BoxSeeder::class,]);
     }
 }

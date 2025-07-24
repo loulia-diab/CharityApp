@@ -4,6 +4,7 @@ use App\Http\Controllers\admin\AdminAuthController;
 use App\Http\Controllers\admin\AdminController;
 use App\Http\Controllers\beneficiary\BeneficiaryController;
 use App\Http\Controllers\beneficiary\BeneficiaryRequestController;
+use App\Http\Controllers\BoxController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignBeneficiaryController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignController;
@@ -13,13 +14,10 @@ use App\Http\Controllers\Donation_Type\HumanCase\HumanCaseController;
 
 use App\Http\Controllers\Donation_Type\InKind\InKindBeneficiaryController;
 use App\Http\Controllers\Donation_Type\InKind\InKindController;
-
-use App\Http\Controllers\GoogleController;
-
 use App\Http\Controllers\Donation_Type\Sponsorship\PlanController;
 use App\Http\Controllers\Donation_Type\Sponsorship\SponsorshipController;
 use App\Http\Controllers\LanguageController;
-use App\Http\Controllers\user\PhoneAuthController;
+use App\Http\Controllers\user\GoogleController;
 use App\Http\Controllers\user\UserAuthController;
 use App\Http\Controllers\user\UserController;
 use App\Http\Controllers\volunteer\VolunteerController;
@@ -63,6 +61,10 @@ Route::prefix('admin')->group(function () {
     });
 });
 
+Route::prefix('box')->group(function () {
+    Route::get('/getOne/{name_en}', [BoxController::class, 'getBoxByName'])->middleware( 'checkLanguage');
+});
+
 Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
 
     Route::post('/setLanguage', [LanguageController::class, 'setLanguage']);
@@ -85,6 +87,7 @@ Route::prefix('beneficiary_request')->group(function () {
   //  Route::get('/getBeneficiariesByPriority', [BeneficiaryRequestController::class, 'getBeneficiariesByPriority']);
   //  Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
 });
+
 Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);
     Route::get('/getAll',[CategoryController::class,'getAllCategories']);

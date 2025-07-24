@@ -17,10 +17,10 @@ return new class extends Migration
 
             $table->string('name_ar');
             $table->string('name_en');
-            $table->text('description_ar');
-            $table->text('description_en');
-            $table->string('image');
-            $table->string('price');
+            $table->text('description_ar')->nullable();
+            $table->text('description_en')->nullable();
+            $table->string('image')->nullable();
+            $table->string('price')->nullable();
             $table->decimal('balance', 10, 2)->default(0);
             $table->timestamps();
         });

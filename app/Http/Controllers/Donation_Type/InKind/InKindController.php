@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Campaigns\Campaign;
 use App\Models\Category;
 use App\Models\InKind;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,12 +16,19 @@ class InKindController extends Controller
     public function addInKind(Request $request)
     {
         $locale = app()->getLocale();
+        $otp = '123456'; // كود التحقق الثابت
 
         $request->validate([
             'address' => 'required|string|max:255',
             'category_ids' => 'required|array|min:1',
             'category_ids.*' => 'exists:categories,id',
+            'phone' => 'required|string|digits:10',  // بدون unique عشان نخزن الرقم مع كل تبرع
+            'otp' => 'required|string',
         ]);
+
+        if ($request->otp !== $otp) {
+            return response()->json(['message' => 'رمز التحقق غير صحيح'], 422);
+        }
 
         $user = auth()->user();
         if (!$user) {
@@ -52,10 +60,7 @@ class InKindController extends Controller
                 'status' => CampaignStatus::Pending->value,
                 'goal_amount' => 0,
                 'collected_amount' => 0,
-
             ]);
-
-
             $campaign->categories()->sync($request->category_ids);
 
             // إنشاء التبرع العيني وربطه بالحملة والتصنيفات
@@ -64,6 +69,7 @@ class InKindController extends Controller
                 'campaign_id' => $campaign->id,
                 'address_en' => $locale === 'en' ? $request->address : null,
                 'address_ar' => $locale === 'ar' ? $request->address : null,
+                'phone' => $request->phone, // تخزين رقم الهاتف مع التبرع
             ]);
 
             $inKind->categories()->sync($request->category_ids);
@@ -83,16 +89,52 @@ class InKindController extends Controller
             ], 500);
         }
     }
+    public function getAllUserInKinds()
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $locale = app()->getLocale();
+
+        $inKinds = InKind::with('campaign.categories')
+            ->where('user_id', $user->id)
+            ->get()
+            ->map(function ($inKind) use ($locale) {
+                return [
+                    'id' => $inKind->id,
+                    'address' => $locale === 'ar' ? $inKind->address_ar : $inKind->address_en,
+                    'phone' => $inKind->phone,
+                    'created_at' => $inKind->created_at->format('Y-m-d H:i'),
+                    'categories' => $inKind->campaign->categories->map(function ($cat) use ($locale) {
+                        return [
+                            'name' => $locale === 'ar' ? $cat->name_ar : $cat->name_en,
+                        ];
+                    })->values(),
+                ];
+            });
+
+        return response()->json([
+            'message' => 'User in-kind donations retrieved successfully',
+            'data' => $inKinds,
+        ]);
+    }
+
+
+    // ADMIN
 
     public function getAllInKinds() {
+        $locale = app()->getLocale();
         $admin = auth('admin')->user();
         if (!$admin) {
             return response()->json([
                 'message' => 'Unauthorized - Admin access only',
             ], 401);
         }
-
-        $locale = app()->getLocale();
         $addressField = "address_{$locale}";
 
         $query = InKind::query();
@@ -109,8 +151,8 @@ class InKindController extends Controller
             return [
                 'id' => $inKind->id,
                 'address' => $inKind->{$addressField} ?? null,
+                'phone' => $inKind->phone ?? null,  // إضافة رقم الهاتف لو موجود
                 'created_at' => $inKind->created_at->toDateTimeString(),
-
                 'categories' => $inKind->campaign->categories->map(function ($cat) use ($locale) {
                     return [
                         'id' => $cat->id,
@@ -119,6 +161,7 @@ class InKindController extends Controller
                 })->values(),
             ];
         });
+
         return response()->json([
             'message' => 'In-kind donations retrieved successfully',
             'data' => $inKinds,
@@ -126,24 +169,21 @@ class InKindController extends Controller
     }
 
     public function getInKindsByCategory($categoryId) {
+        $locale = app()->getLocale();
         $admin = auth('admin')->user();
         if (!$admin) {
             return response()->json([
                 'message' => 'Unauthorized - Admin access only',
             ], 401);
         }
-
-        $locale = app()->getLocale();
         $addressField = "address_{$locale}";
 
         $query = InKind::query();
 
-        // نفلتر حسب وجود التصنيف ضمن تصنيفات حملة التبرع العيني
         $query->whereHas('campaign.categories', function ($q) use ($categoryId) {
             $q->where('id', $categoryId);
         });
 
-        // فقط الحملات في حالة Pending
         $query->whereHas('campaign', function($q) {
             $q->where('status', CampaignStatus::Pending->value);
         });
@@ -152,6 +192,7 @@ class InKindController extends Controller
             return [
                 'id' => $inKind->id,
                 'address' => $inKind->{$addressField} ?? null,
+                'phone' => $inKind->phone ?? null,
                 'created_at' => $inKind->created_at->toDateTimeString(),
                 'categories' => $inKind->campaign->categories->map(function ($cat) use ($locale) {
                     return [
@@ -168,19 +209,17 @@ class InKindController extends Controller
         ]);
     }
 
-
     public function getInKindDetails($inKindId) {
+        $locale = app()->getLocale();
         $admin = auth('admin')->user();
         if (!$admin) {
             return response()->json([
                 'message' => 'Unauthorized - Admin access only',
             ], 401);
         }
-
-        $locale = app()->getLocale();
         $addressField = "address_{$locale}";
 
-        $inKind = InKind::with('campaign.categories')->find($inKindId);
+        $inKind = InKind::with('campaign.categories', 'user')->find($inKindId);
 
         if (!$inKind) {
             return response()->json([
@@ -191,6 +230,7 @@ class InKindController extends Controller
         $data = [
             'id' => $inKind->id,
             'address' => $inKind->{$addressField} ?? null,
+            'phone' => $inKind->phone ?? null,
             'created_at' => $inKind->created_at->toDateTimeString(),
             'categories' => $inKind->campaign->categories->map(function ($cat) use ($locale) {
                 return [
@@ -198,6 +238,11 @@ class InKindController extends Controller
                     'name' => $locale === 'ar' ? $cat->name_ar : $cat->name_en,
                 ];
             })->values(),
+            'user' => [
+                'id' => $inKind->user->id,
+                'name' => $inKind->user->name,
+                'email' => $inKind->user->email,
+            ],
         ];
 
         return response()->json([
@@ -206,8 +251,8 @@ class InKindController extends Controller
         ]);
     }
 
-
-    public function acceptInKind(Request $request) {
+    public function acceptInKind(Request $request)
+    {
         $admin = auth('admin')->user();
         if (!$admin) {
             return response()->json([
@@ -233,28 +278,39 @@ class InKindController extends Controller
                 ], 404);
             }
 
+            // تحقق إذا التبرع العيني لم يقبل أو يرفض مسبقاً (اختياري)
+            if ($inKind->status === 'active') {
+                DB::rollBack();
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'تم قبول التبرع مسبقاً' : 'In-kind donation already accepted',
+                ], 422);
+            }
+
             $campaign = $inKind->campaign;
 
-            // تحديث حالة الحملة لو مش Active
-            if ($campaign->status !== CampaignStatus::Active->value) {
+            if ($campaign && $campaign->status !== CampaignStatus::Active->value) {
                 $campaign->status = CampaignStatus::Active->value;
                 $campaign->save();
             }
 
-            // إنشاء ترانزاكشن لتوثيق وصول التبرع العيني
+            $inKind->status = 'active';
+            $inKind->save();
+
             Transaction::create([
-                'user_id' => $inKind->user_id,
-                'campaign_id' => $campaign->id,
-                'in_kind_id' => $inKind->id,  // إذا عندك العمود هذا في جدول transactions
-                'type' => 'in_kind_received',
-                'amount' => 0, // أو حسب ما يناسب التبرع العيني
-                'description' => $locale === 'ar' ? 'تم قبول التبرع العيني' : 'In-kind donation accepted',
+                'user_id'     => $inKind->user_id,
+                'admin_id'    => $admin->id,
+                'campaign_id' => $inKind->campaign_id,
+                'box_id'      => null,
+                'type'        => 'donation',
+                'direction'   => 'in',
             ]);
 
             DB::commit();
 
             return response()->json([
-                'message' => $locale === 'ar' ? 'تم قبول التبرع العيني وتحديث حالة الحملة' : 'In-kind donation accepted and campaign status updated',
+                'message' => $locale === 'ar'
+                    ? 'تم قبول التبرع العيني وتحديث حالة الحملة'
+                    : 'In-kind donation accepted and campaign status updated',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -265,35 +321,6 @@ class InKindController extends Controller
         }
     }
 
-    public function getAllUserInKinds() {
-        $user = auth()->user();
 
-        if (!$user) {
-            return response()->json([
-                'message' => 'Unauthorized',
-            ], 401);
-        }
-
-        $locale = app()->getLocale();
-
-        $inKinds = InKind::with('campaign.categories')
-            ->where('user_id', $user->id)
-            ->get()
-            ->map(function ($inKind) use ($locale) {
-            return [
-                'id' => $inKind->id,
-                'categories' => $inKind->campaign->categories->map(function ($cat) use ($locale) {
-                    return [
-                        'name' => $locale === 'ar' ? $cat->name_ar : $cat->name_en,
-                    ];
-                })->values(),
-            ];
-        });
-
-        return response()->json([
-            'message' => 'User in-kind donations retrieved successfully',
-            'data' => $inKinds,
-        ]);
-    }
 
 }

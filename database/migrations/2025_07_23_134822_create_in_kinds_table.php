@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('campaign_id') ->nullable()->constrained()->onDelete('cascade');
             $table->text('address_en')->nullable();
             $table->text('address_ar')->nullable();
+            $table->string('phone', 10);
             $table->timestamps();
         });
     }

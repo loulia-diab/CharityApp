@@ -10,11 +10,16 @@ class InKind extends Model
         'user_id',
         'address_en',
         'address_ar',
+        'phone'
 
     ];
     public function beneficiaries()
     {
         return $this->belongsToMany(Beneficiary::class, 'in_kind_beneficiary');
     }
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
+
 
 }

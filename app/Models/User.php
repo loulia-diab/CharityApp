@@ -76,4 +76,8 @@ class User extends Authenticatable
     {
         return $this->hasMany(Gift::class);
     }
+    public function inKinds() {
+        return $this->hasMany(InKind::class);
+    }
+
 }

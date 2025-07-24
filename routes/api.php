@@ -142,7 +142,6 @@ Route::prefix('humanCase')->group(function () {
     });
 Route::prefix('sponsorship')->group(function () {
         // Admin
-
     Route::post('/add', [SponsorshipController::class, 'addSponsorship']);
     Route::post('/update/{Id}', [SponsorshipController::class, 'updateSponsorship']);
     Route::post('/activate/{Id}', [SponsorshipController::class, 'activateSponsorship']);
@@ -153,17 +152,6 @@ Route::prefix('sponsorship')->group(function () {
     Route::get('category/{categoryId}/byStatus/{status}', [SponsorshipController::class, 'getSponsorShipsByStatus']);
     Route::get('byCreationDate', [SponsorshipController::class, 'getAllSponsorshipsByCreationDate']);
     Route::get('/getCancelled', [SponsorshipController::class, 'getCancelledSponsorships']);
-
-        Route::post('/add', [SponsorshipController::class, 'addSponsorship']);
-        Route::post('/update/{Id}', [SponsorshipController::class, 'updateSponsorship']);
-        Route::post('/activate/{Id}', [SponsorshipController::class, 'activateSponsorship']);
-        Route::post('/cancelled/{Id}', [SponsorshipController::class, 'cancelledSponsorship']);
-        Route::get('/getAll', [SponsorshipController::class, 'getAllSponsorShips']);
-        Route::get('/get/{Id}', [SponsorshipController::class, 'getSponsorshipDetails']);
-        Route::get('/category/{categoryId}', [SponsorshipController::class, 'getSponsorshipsByCategory']);
-        Route::get('category/{categoryId}/byStatus/{status}', [SponsorshipController::class, 'getSponsorshipsByStatus']);
-        Route::get('byCreationDate', [SponsorshipController::class, 'getAllSponsorshipsByCreationDate']);
-        Route::get('getCancelled', [SponsorshipController::class, 'getCancelledSponsorships']);
 
     });
 Route::prefix('inKinds')->group(function () {

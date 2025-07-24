@@ -30,14 +30,17 @@ class InKindBeneficiaryController extends Controller
             ], 404);
         }
 
-        // ربط المستفيدين بالتبرع العيني (يحفظ الموجود فقط)
         $inKind->beneficiaries()->syncWithoutDetaching($request->beneficiary_ids);
+
+        // جلب المستفيدين بعد التحديث
+        $inKind->load('beneficiaries');
 
         return response()->json([
             'message' => 'Beneficiaries added to in-kind donation successfully',
-            'data' => $inKind->beneficiaries()->get(),
+            'data' => $inKind->beneficiaries,
         ]);
     }
+
     // جلب مستفيدين تبرع عيني لحالو
     public function getInKindBeneficiaries($inKindId) {
         $admin = auth('admin')->user();
@@ -61,12 +64,16 @@ class InKindBeneficiaryController extends Controller
                 return [
                     'id' => $beneficiary->id,
                     'name' => $beneficiary->name,
-                    // أضف أي حقول أخرى تريد عرضها
+                    // أضف الحقول التي تحتاجها مثل العمر، الجنس، وغيرها
+                    // 'age' => $beneficiary->age,
+                    // 'gender' => $beneficiary->gender,
                 ];
             }),
         ]);
     }
 
+
+    // غير مستخدمة
     // جلب مستفيدين تبرعات عينية حسب التصنيف المعين
     public function getBeneficiariesByCategory($categoryId) {
         $admin = auth('admin')->user();

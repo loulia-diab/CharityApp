@@ -140,6 +140,7 @@ Route::prefix('humanCase')->group(function () {
         Route::get('/category/{categoryId}/byStatus/{status}', [HumanCaseController::class, 'getHumanCasesByStatus']);
         Route::get('byCreationDate', [HumanCaseController::class, 'getHumanCasesByCreationDate']);
     });
+
 Route::prefix('sponsorship')->group(function () {
         // Admin
     Route::post('/add', [SponsorshipController::class, 'addSponsorship']);

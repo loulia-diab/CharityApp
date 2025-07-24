@@ -176,9 +176,7 @@ Route::prefix('inKinds')->group(function () {
 
 // استفاداتي
 Route::get('/beneficiary/{beneficiaryId}/campaigns', [BeneficiaryController::class, 'getBeneficiaryCampaigns']);
-Route::get('/beneficiary/{beneficiaryId}/humanCases', [BeneficiaryController::class, 'getBeneficiaryHumanCases']);
-Route::get('/beneficiary/{beneficiaryId}/sponsorships', [BeneficiaryController::class, 'getBeneficiarySponsorships']);
-Route::get('/beneficiary/{beneficiaryId}/inKinds', [BeneficiaryController::class, 'getBeneficiaryInKinds']);
+
 // تطوعاتي
 Route::get('/volunteer/{volunteerId}/campaigns', [VolunteerController::class, 'getVolunteerCampaigns']);
 // الدوري (كفالة)

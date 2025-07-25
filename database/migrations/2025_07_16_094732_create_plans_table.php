@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('sponsorship_id')->constrained('sponsorships');
+            $table->foreignId('sponsorship_id')->nullable()->constrained()->cascadeOnDelete();
             $table->double('amount');
             $table->boolean('is_activated')->default(false);
             $table->date('start_date');

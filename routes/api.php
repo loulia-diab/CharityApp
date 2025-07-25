@@ -195,9 +195,9 @@ Route::prefix('plans')->group(function () {
     // خطط الكفالة للأدمن :الكفلاء المتبرعين
     Route::get('/getAll/sponsorshipDonors', [PlanController::class, 'getSponsorshipsDonors']);
     //  التبرع الدوري
-    Route::post('/activate/recurring/{planId}', [PlanController::class, 'activateRecurring']);
-    Route::post('/deactivate/recurring/{planId}', [PlanController::class, 'deactivateRecurring']);
-    Route::post('/activate/recurring/{planId}', [PlanController::class, 'reactivateRecurring']);
+    Route::post('/active/recurring', [PlanController::class, 'activateRecurring']);
+    Route::post('/deactive/recurring/{planId}', [PlanController::class, 'deactivateRecurring']);
+    Route::post('/reactive/recurring/{planId}', [PlanController::class, 'reactivateRecurring']);
 // تبرعي الدوري
     Route::get('/getAll/recurring/for/user', [PlanController::class, 'getRecurringPlan']);
  // جلب خطط التبرع للمستخدمين
@@ -208,6 +208,7 @@ Route::prefix('plans')->group(function () {
 });
 
 // NO AUTH FOR USER LIKE GUEST
+Route::middleware([ 'checkLanguage'])->group(function () {
 Route::prefix('category')->group(function () {
     Route::get('/{main_category}', [CategoryController::class, 'getAllCategoriesByMainCategory']);
     Route::get('/{categoryId}/for/user', [CategoryController::class, 'getCategoryByIdForUser']);
@@ -234,3 +235,4 @@ Route::prefix('sponsorships')->group(function () {
 
 });
 
+});

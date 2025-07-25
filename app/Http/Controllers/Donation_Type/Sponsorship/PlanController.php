@@ -45,159 +45,6 @@ class PlanController extends Controller
     }
 
     // تفعيل خطة الكفالة
-    public function activatePlan2(Request $request, $planId)
-    {
-        $user = auth()->user();
-        $locale = app()->getLocale();
-
-        $request->validate([
-            'amount' => 'required|numeric|min:1',
-        ]);
-
-        $amountToPay = $request->input('amount');
-
-        $plan = Plan::where('id', $planId)
-            ->whereNotNull('sponsorship_id')
-            ->where('is_activated', false)
-            ->with('sponsorship.campaign')
-            ->first();
-
-        if (!$plan) {
-            return response()->json([
-                'message' => $locale === 'ar' ? 'الخطة غير موجودة أو مفعلة مسبقًا.' : 'Plan not found or already activated.'
-            ], 404);
-        }
-
-        $campaign = $plan->sponsorship->campaign;
-
-        if ($campaign->status === 'completed' || $campaign->collected_amount >= $campaign->goal_amount) {
-            return response()->json([
-                'message' => $locale === 'ar' ? 'الكفالة مكتملة ولا يمكن تفعيل خطط جديدة.' : 'Sponsorship is completed, no new plans can be activated.'
-            ], 422);
-        }
-
-        $goalAmount = $campaign->goal_amount;
-
-        $totalActiveAmount = Plan::where('sponsorship_id', $plan->sponsorship_id)
-            ->where('is_activated', true)
-            ->sum('amount');
-
-        $newTotal = $totalActiveAmount + $amountToPay;
-
-        if ($newTotal > $goalAmount) {
-            $remaining = max(0, $goalAmount - $totalActiveAmount);
-            return response()->json([
-                'message' => $locale === 'ar'
-                    ? "تجاوزت المبلغ المطلوب للكفالة. المتبقي: $remaining"
-                    : "Sponsorship goal exceeded. Remaining amount: $remaining",
-                'remaining_amount' => $remaining
-            ], 422);
-        }
-
-        if ($user->balance < $amountToPay) {
-            return response()->json([
-                'message' => $locale === 'ar' ? 'رصيد المحفظة غير كافٍ لتفعيل الخطة.' : 'Insufficient wallet balance to activate the plan.',
-                'wallet_balance' => $user->balance,
-                'required_amount' => $amountToPay
-            ], 422);
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $user->balance -= $amountToPay;
-            $user->save();
-
-            $transactionIn = Transaction::create([
-                'user_id' => $user->id,
-                'amount' => $amountToPay,
-                'type' => 'donation',
-                'direction' => 'in',
-                'campaign_id' => $campaign->id,
-            ]);
-
-            $transactionOut = Transaction::create([
-                'user_id' => $user->id,
-                'amount' => $amountToPay,
-                'type' => 'donation',
-                'direction' => 'out',
-                'campaign_id' => $campaign->id,
-            ]);
-
-            $plan->update([
-                'is_activated' => true,
-                'amount' => $amountToPay,
-                'start_date' => now(),
-                'end_date' => now()->addMonth(),
-            ]);
-
-            // إعادة حساب المجموع الحقيقي
-            $totalCollected = Plan::where('sponsorship_id', $plan->sponsorship_id)
-                ->where('is_activated', true)
-                ->sum('amount');
-
-            $campaign->collected_amount = $totalCollected;
-
-            if ($totalCollected >= $campaign->goal_amount) {
-                $campaign->status = 'completed';
-                $campaign->completed_at = now();
-            }
-            $campaign->save();
-
-            DB::commit();
-
-            return response()->json([
-                'message' => $locale === 'ar' ? 'تم تفعيل خطة الكفالة بنجاح' : 'Sponsorship plan activated successfully',
-                'data' => [
-                    'plan' => [
-                        'id' => $plan->id,
-                        'user_id' => $plan->user_id,
-                        'sponsorship_id' => $plan->sponsorship_id,
-                        'amount' => $plan->amount,
-                        'is_activated' => $plan->is_activated,
-                        'start_date' => $plan->start_date,
-                        'end_date' => $plan->end_date,
-                        'recurrence' => $plan->recurrence,
-                        'created_at' => $plan->created_at,
-                        'updated_at' => $plan->updated_at,
-                        'recurrence_label' => $plan->recurrence_label,
-                    ],
-                    'campaign' => [
-                        'goal_amount' => (float) $campaign->goal_amount,
-                        'collected_amount' => (float) $campaign->collected_amount,
-                        'remaining_amount' => max(0, (float) $campaign->goal_amount - (float) $campaign->collected_amount),
-                        'status' => $campaign->status,
-                    ],
-                    'transactions' => [
-                        [
-                            'id' => $transactionIn->id,
-                            'amount' => $transactionIn->amount,
-                            'type' => $transactionIn->type,
-                            'direction' => $transactionIn->direction,
-                            'pdf_url' => $transactionIn->pdf_url ? asset('storage/' . $transactionIn->pdf_url) : null,
-                            'created_at' => $transactionIn->created_at,
-                        ],
-                        [
-                            'id' => $transactionOut->id,
-                            'amount' => $transactionOut->amount,
-                            'type' => $transactionOut->type,
-                            'direction' => $transactionOut->direction,
-                            'pdf_url' => $transactionOut->pdf_url ? asset('storage/' . $transactionOut->pdf_url) : null,
-                            'created_at' => $transactionOut->created_at,
-                        ],
-                    ],
-                ]
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => $locale === 'ar' ? 'حدث خطأ أثناء التفعيل' : 'Error during activation',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-
     public function activatePlan(Request $request, $planId)
     {
         $user = auth()->user();
@@ -225,7 +72,7 @@ class PlanController extends Controller
 
         $campaign = $plan->sponsorship->campaign;
 
-        if ($campaign->status === 'completed' || $campaign->collected_amount >= $campaign->goal_amount) {
+        if ($campaign->status === 'complete' || $campaign->collected_amount >= $campaign->goal_amount) {
             return response()->json([
                 'message' => $locale === 'ar' ? 'الكفالة مكتملة ولا يمكن تفعيل خطط جديدة.' : 'Sponsorship is completed, no new plans can be activated.'
             ], 422);
@@ -281,7 +128,7 @@ class PlanController extends Controller
             // تحديث المبلغ المجموع للحملة
             $campaign->collected_amount += $amountToPay;
             if ($campaign->collected_amount >= $campaign->goal_amount) {
-                $campaign->status = 'completed';
+                $campaign->status = 'complete';
                 $campaign->completed_at = now();
             }
             $campaign->save();
@@ -388,7 +235,7 @@ class PlanController extends Controller
         $campaign = $plan->sponsorship->campaign;
 
         // لا يمكن إعادة تفعيل الخطة إذا كانت الكفالة مكتملة
-        if ($campaign->status === 'completed') {
+        if ($campaign->status === 'complete') {
             return response()->json([
                 'message' => $locale === 'ar' ? 'الكفالة مكتملة ولا يمكن تفعيل الخطط.' : 'Sponsorship is completed, cannot reactivate plan.',
             ], 422);
@@ -423,57 +270,6 @@ class PlanController extends Controller
     }
 
     // كفالاتي ك متبرع
-    public function getSponsorshipPlansForUser2()
-    {
-        $user = auth()->user();
-        $locale = app()->getLocale();
-
-        $plans = Plan::where('user_id', $user->id)
-            ->whereNotNull('sponsorship_id')
-            ->with('sponsorship.campaign')
-            ->latest('created_at')
-            ->get();
-
-        foreach ($plans as $plan) {
-            $plan->transactions = Transaction::where('campaign_id', $plan->sponsorship->campaign_id)
-                ->whereBetween('created_at', [$plan->start_date, $plan->end_date])
-                ->get();
-        }
-
-        return response()->json([
-            'message' => $locale === 'ar' ? 'تم جلب الكفالات الخاصة بك' : 'Your sponsorship plans retrieved',
-            'data' => $plans->map(function ($plan) use ($locale) {
-                // جلب الترانزاكشنات الخاصة بالحملة المرتبطة بالخطة (الكفالة)
-                $transactions = Transaction::where('campaign_id', $plan->sponsorship->campaign_id)
-                    ->orderBy('created_at', 'desc')
-                    ->get();
-
-                return [
-                    'id' => $plan->id,
-                    'amount' => $plan->amount,
-                    'recurrence' => $plan->recurrence,
-                    'is_activated' => $plan->is_activated,
-                    'start_date' => $plan->start_date,
-                    'end_date' => $plan->end_date,
-                    'sponsorship' => [
-                        'id' => $plan->sponsorship->id,
-                        'title' => $locale === 'ar' ? $plan->sponsorship->title_ar : $plan->sponsorship->title_en,
-                    ],
-                    'transactions' => $transactions->map(function ($transaction) {
-                        return [
-                            'id' => $transaction->id,
-                            'amount' => $transaction->amount,
-                            'type'=>$transaction->type,
-                            'direction'=>$transaction->direction,
-                            'pdf_url' => $transaction->pdf_url ? asset('storage/' . $transaction->pdf_url) : null,
-                            'created_at' => $transaction->created_at->toDateTimeString(),
-                        ];
-                    }),
-                ];
-            }),
-        ]);
-    }
-
     public function getSponsorshipPlansForUser()
     {
         $user = auth()->user();
@@ -490,12 +286,22 @@ class PlanController extends Controller
 
             if ($plan->start_date && $plan->end_date) {
                 $transactions = Transaction::where('campaign_id', $plan->sponsorship->campaign_id)
+                    ->where('user_id', $plan->user_id)
                     ->whereBetween('created_at', [
                         Carbon::parse($plan->start_date),
                         Carbon::parse($plan->end_date)
                     ])
+                    ->where('amount', $plan->amount) // ← فلترة بالقيمة
                     ->orderBy('created_at', 'desc')
-                    ->get(['id', 'amount', 'type', 'direction', 'pdf_url', 'created_at']);
+                    ->get([
+                        'id',
+                        'amount',
+                        'type',
+                        'direction',
+                        'pdf_url',
+                        'created_at'
+                    ]);
+
             }
 
             return [
@@ -507,9 +313,20 @@ class PlanController extends Controller
                 'end_date' => $plan->end_date ? Carbon::parse($plan->end_date)->format('Y-m-d') : null,
                 'sponsorship' => [
                     'id' => $plan->sponsorship->id,
-                    'title' => $locale === 'ar' ? $plan->sponsorship->title_ar : $plan->sponsorship->title_en,
+                    'title' => $locale === 'ar'
+                        ? $plan->sponsorship->campaign->title_ar
+                        : $plan->sponsorship->campaign->title_en,
                 ],
-                'transactions' => $transactions,
+                'transactions' => $transactions->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'amount' => $t->amount,
+                        'type' => $t->type,
+                        'direction' => $t->direction,
+                        'pdf_url' => $t->pdf_url ? asset('storage/' . $t->pdf_url) : null,
+                        'date' => $t->created_at->format('Y-m-d'),
+                    ];
+                }),
             ];
         });
 
@@ -518,6 +335,7 @@ class PlanController extends Controller
             'data' => $data
         ]);
     }
+
     // عرض الكفلاء
     public function getSponsorshipsDonors()
     {
@@ -568,8 +386,7 @@ class PlanController extends Controller
         DB::beginTransaction();
 
         try {
-            // جلب صندوق التبرعات العامة
-            $generalBox = Box::where('name->en', 'General Donations')->first();
+            $generalBox = Box::where('name_en', 'General Donation')->first();
 
             if (!$generalBox) {
                 return response()->json([
@@ -577,6 +394,15 @@ class PlanController extends Controller
                         ? 'صندوق التبرعات العامة غير موجود.'
                         : 'General donation box not found.'
                 ], 500);
+            }
+
+            // تحقق من الرصيد قبل أي حفظ
+            if ($user->balance < $request->amount) {
+                return response()->json([
+                    'message' => $locale === 'ar'
+                        ? 'الرصيد غير كافٍ في المحفظة.'
+                        : 'Insufficient wallet balance.',
+                ], 400);
             }
 
             // إنشاء الخطة
@@ -603,7 +429,15 @@ class PlanController extends Controller
 
             $plan->save();
 
-            // إنشاء معاملة واحدة فقط: سحب من المحفظة لصالح الجمعية
+            // خصم الرصيد من المستخدم
+            $user->balance -= $request->amount;
+            $user->save();
+
+            // زيادة رصيد الصندوق
+            $generalBox->balance += $request->amount;
+            $generalBox->save();
+
+            // إنشاء المعاملة
             Transaction::create([
                 'user_id' => $user->id,
                 'type' => 'donation',
@@ -614,7 +448,7 @@ class PlanController extends Controller
 
             DB::commit();
 
-            $recurrenceLabel = RecurrenceType::from($plan->recurrence)->label($locale);
+            $recurrenceLabel = $plan->recurrence->label($locale);
 
             $transaction = Transaction::where('user_id', $user->id)
                 ->where('type', 'donation')
@@ -631,13 +465,13 @@ class PlanController extends Controller
                     'amount' => $plan->amount,
                     'recurrence' => $plan->recurrence,
                     'recurrence_label' => $recurrenceLabel,
-                    'start_date' => $plan->start_date,
-                    'end_date' => $plan->end_date,
+                    'start_date' => $plan->start_date->format('Y-m-d'), // أو أي تنسيق تريده
+                    'end_date' => $plan->end_date->format('Y-m-d'),
                     'is_activated' => $plan->is_activated,
                     'receipt_url' => $transaction?->pdf_url
-
                 ]
             ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -646,6 +480,7 @@ class PlanController extends Controller
             ], 500);
         }
     }
+
 
     // الغاء تفعيل
     public function deactivateRecurring($planId)
@@ -656,7 +491,6 @@ class PlanController extends Controller
         $plan = Plan::where('id', $planId)
             ->where('user_id', $user->id)
             ->whereNull('sponsorship_id')
-            ->where('is_activated', true)
             ->first();
 
         if (!$plan) {
@@ -673,7 +507,13 @@ class PlanController extends Controller
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم إيقاف خطة التبرع العام' : 'General donation plan deactivated',
+            'data' => [
+                'id' => $plan->id,
+                'end_date' => $plan->end_date->format('Y-m-d'),
+                'is_activated' => $plan->is_activated,
+            ],
         ]);
+
     }
 
     // اعادة تفعيل
@@ -711,6 +551,7 @@ class PlanController extends Controller
             default:
                 $plan->end_date = $now->copy()->addMonth();
         }
+        $recurrenceLabel = $plan->recurrence->label($locale);
 
         $plan->save();
 
@@ -720,8 +561,9 @@ class PlanController extends Controller
                 'id' => $plan->id,
                 'amount' => $plan->amount,
                 'recurrence' => $plan->recurrence,
-                'start_date' => $plan->start_date,
-                'end_date' => $plan->end_date,
+                'recurrence_label' => $recurrenceLabel,
+                'start_date' => $plan->start_date->format('Y-m-d'),
+                'end_date' => $plan->end_date->format('Y-m-d'),
                 'is_activated' => $plan->is_activated,
             ]
         ]);
@@ -734,29 +576,37 @@ class PlanController extends Controller
         $user = auth()->user();
         $locale = app()->getLocale();
 
-        $plan = Plan::where('user_id', $user->id)
+        $plans = Plan::where('user_id', $user->id)
             ->whereNull('sponsorship_id') // فقط التبرع العام
             ->latest('created_at')
-            ->first();
+            ->get();
 
-        if (!$plan) {
+        if ($plans->isEmpty()) {
             return response()->json([
-                'message' => $locale === 'ar' ? 'لا يوجد خطة تبرع دوري حالياً' : 'No recurring donation plan found',
+                'message' => $locale === 'ar' ? 'لا يوجد خطة تبرع دوري حالياً' : 'No recurring donation plans found',
             ]);
         }
 
         return response()->json([
-            'message' => $locale === 'ar' ? 'تم جلب خطة التبرع الدوري' : 'Recurring donation plan retrieved',
-            'data' => [
-                'id' => $plan->id,
-                'amount' => $plan->amount,
-                'recurrence' => $plan->recurrence,
-                'is_activated' => $plan->is_activated,
-                'start_date' => $plan->start_date,
-                'end_date' => $plan->end_date,
-            ]
+            'message' => $locale === 'ar' ? 'تم جلب خطط التبرع الدوري' : 'Recurring donation plans retrieved',
+            'data' => $plans->map(function ($plan) use ($locale) {
+                // حساب recurrence_label لكل خطة فردياً
+                $recurrenceLabel = $plan->recurrence->label($locale);
+
+                return [
+                    'id' => $plan->id,
+                    'amount' => $plan->amount,
+                    'recurrence' => $plan->recurrence,
+                    'recurrence_label' => $recurrenceLabel,
+                    'is_activated' => $plan->is_activated,
+                    'start_date' => $plan->start_date,
+                    'end_date' => $plan->end_date,
+                ];
+            }),
         ]);
     }
+
+
     // جلب خطط التبرع الدوري للأدمن
     public function getRecurringPlansDonors()
     {

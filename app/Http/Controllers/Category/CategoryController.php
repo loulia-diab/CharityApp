@@ -183,7 +183,7 @@ class CategoryController extends Controller
 
     public function getAllCategoriesByMainCategory($main_category)
     {
-        $allowedMainCategories = ['Campaign', 'HumanCase', 'Sponsorship','inKind'];
+        $allowedMainCategories = ['Campaign', 'HumanCase', 'Sponsorship','InKind'];
 
         if (!in_array($main_category, $allowedMainCategories)) {
             return response()->json([

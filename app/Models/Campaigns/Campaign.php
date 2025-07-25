@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Models\Beneficiary;
 use App\Models\Category;
 use App\Models\HumanCase;
+use App\Models\InKind;
 use App\Models\Sponsorship;
 use App\Models\Volunteer;
 use Carbon\Carbon;
@@ -91,5 +92,10 @@ class Campaign extends Model
     public function sponsorship()
     {
         return $this->hasOne(Sponsorship::class);
+    }
+
+    public function inKind()
+    {
+        return $this->hasOne(inKind::class);
     }
 }

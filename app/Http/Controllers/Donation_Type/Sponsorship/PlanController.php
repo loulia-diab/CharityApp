@@ -18,6 +18,7 @@ class PlanController extends Controller
     public function createPlanForSponsorship(Request $request, $sponsorshipId)
     {
         $user = auth()->user();
+        $locale = app()->getLocale(); // تحديد اللغة الحالية
 
         // تحقق من وجود الكفالة
         $sponsorship = Sponsorship::findOrFail($sponsorshipId);
@@ -35,14 +36,19 @@ class PlanController extends Controller
             'recurrence' => 'monthly',
             'is_activated' => false,
             'start_date' => now(),
-            'end_date'=>now()->copy()->addMonth(),
+            'end_date'=> now()->copy()->addMonth(),
         ]);
 
+        $message = $locale === 'ar'
+            ? 'تم إنشاء خطة كفالة بنجاح'
+            : 'Sponsorship plan created successfully';
+
         return response()->json([
-            'message' => 'تم إنشاء خطة كفالة بنجاح',
+            'message' => $message,
             'plan_id' => $plan->id,
-        ]);
+        ], 201);
     }
+
 
     // تفعيل خطة الكفالة
     public function activatePlan(Request $request, $planId)
@@ -150,7 +156,7 @@ class PlanController extends Controller
                         'amount'     => $transaction->amount,
                         'type'       => $transaction->type,
                         'direction'  => $transaction->direction,
-                        'pdf_url'    => $transaction->pdf_url ? asset('storage/' . $transaction->pdf_url) : null,
+                        'pdf_url'    => $transaction->pdf_url ?? null,
                         'created_at' => $transaction->created_at,
                     ],
                 ]

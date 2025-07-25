@@ -701,6 +701,7 @@ class SponsorshipController extends Controller
                     'status' => $campaign?->status,
                     'image' => $campaign?->image ?? null,
                     'created_at' => $campaign?->created_at,
+                    'campaign_id'=>$campaign->id,
                 ]
             ]);
 

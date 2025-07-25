@@ -172,7 +172,7 @@ Route::prefix('inKinds')->group(function () {
     // يشوف الادمن حالات التبرع العيني
     Route::get('/getAll/for/admin', [InKindController::class, 'getAllInKinds']);
     // يشوف الادمن التبرعات العينية حسب الكاتيغوريات كلها
-    Route::get('/category/{categoryId}', [InKindController::class, 'getInKindsByCategory']);
+   // Route::get('/category/{categoryId}', [InKindController::class, 'getInKindsByCategory']);
     // يشوف الادمن طلب التبرع لوحده
     Route::get('/get/{inKindId}/for/admin', [InKindController::class, 'getInKindDetails']);
     // قبول التبرع العيني وتسجيله ك ترانزاكشن

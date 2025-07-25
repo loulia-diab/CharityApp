@@ -150,8 +150,8 @@ class InKindController extends Controller
                 $inKind = InKind::create([
                     'user_id' => $user->id,
                     'campaign_id' => $campaign->id,
-                    'address_en' => $request->address,
-                    'address_ar' => $request->address,
+                    'address_en' => $locale === 'en' ? $request->address : null,
+                    'address_ar' => $locale === 'ar' ? $request->address : null,
                     'phone' => $request->phone,
                 ]);
 
@@ -160,16 +160,38 @@ class InKindController extends Controller
                     'campaign' => $campaign,
                     'category' => Category::find($categoryId),
                 ];
-                // ✅ تحديث الـ in_kind ليحمل campaign_id
+
                 $inKind->campaign_id = $campaign->id;
                 $inKind->save();
             }
 
             DB::commit();
+            $data = collect($created)->map(function ($item) {
+                $inKind = $item['in_kind'];
+                $category = $item['category']; // استخدم الكاتيجوري يلي جهزته فوق
+
+                return [
+                    'in_kind' => [
+                        'id' => $inKind->id,
+                        'user_id' => $inKind->user_id,
+                        'campaign_id' => $inKind->campaign_id,
+                        'category_id' => $category?->id,
+                        'name_category_en' => $category?->name_category_en,
+                        'name_category_ar' => $category?->name_category_ar,
+                        'address_en' => $inKind->address_en,
+                        'address_ar' => $inKind->address_ar,
+                        'phone' => $inKind->phone,
+                        'created_at' => $inKind->created_at,
+                        'updated_at' => $inKind->updated_at,
+                    ]
+                ];
+            });
+
+
 
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إنشاء التبرعات العينية بنجاح' : 'In-kind donations created successfully',
-                'data' => $created,
+                'data' => $data,
             ], 201);
 
         } catch (\Exception $e) {
@@ -180,6 +202,7 @@ class InKindController extends Controller
             ], 500);
         }
     }
+
 
 
     public function getAllUserInKinds()

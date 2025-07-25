@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\user;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -119,6 +120,56 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'تم تغيير كلمة المرور بنجاح'
+        ]);
+    }
+
+    public function getAllUsers(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $users = User::select('id', 'name', 'balance', 'email', 'phone')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id'      => $user->id,
+                    'name'    => $user->name,
+                    'contact' => $user->email ?? $user->phone,
+                    'balance' => $user->balance,
+                ];
+            });
+
+        return response()->json([
+            'message' => 'قائمة المستخدمين',
+            'users'   => $users,
+        ]);
+    }
+
+    public function getMyRecharges(Request $request)
+    {
+        $user = auth('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $recharges = $user->recharges()
+            ->select('amount', 'created_at')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($trx) {
+                return [
+                    'amount' => $trx->amount,
+                    'date'   => $trx->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json([
+            'message' => 'سجل عمليات الشحن',
+            'data'    => $recharges,
         ]);
     }
 

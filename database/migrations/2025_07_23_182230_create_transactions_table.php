@@ -25,7 +25,7 @@ return new class extends Migration
                 'recharge',    // شحن رصيد المستخدم
             ]);
             $table->enum('direction', ['in', 'out']);
-            $table->decimal('amount',10,2);
+            $table->decimal('amount');
             $table->string('pdf_url')->nullable();
             $table->timestamps();
         });

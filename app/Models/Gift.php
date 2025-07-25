@@ -18,6 +18,10 @@ class Gift extends Model
         'message',
     ];
 
+    protected $casts = [
+        'is_hide' => 'boolean',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

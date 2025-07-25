@@ -138,15 +138,8 @@ class BoxSeeder extends Seeder
             'box_id' => null,
             'name_ar' => 'الصدقة',
             'name_en' => 'Sadaqah',
-            'description_ar' => ' "الصدقة ليست فقط مالًا يُعطى، بل رحمةٌ تُهدى."
-            حين تمنح، فإنك تروي قلبًا عطشانًا، وتُنير دربًا مظلمًا، وتقول لأخيك الإنسان: "أنا معك."
-            الصدقة لا تُنقص مالك، بل تزيدك بركة وسكينة وسرورًا لا يُشترى.
-امنح مما تحب، فإن ما تعطيه يعود إليك أضعافًا بوجهٍ آخر.
-            ',
-            'description_en' => '" Sadaqah is not just giving — it’s offering hope, silently and sincerely."
-            When you give, you water a thirsty soul, brighten a dark path, and whisper to someone in pain: You are not alone.
-            Sadaqah doesn’t diminish wealth — it multiplies peace, joy, and unseen blessings.
-            Give from the heart, and watch the world bloom.',
+            'description_ar' => 'الصدقة ليست فقط مالًا يُعطى، بل رحمةٌ تُهدى. حين تمنح، فإنك تروي قلبًا عطشانًا، وتُنير دربًا مظلمًا، وتقول لأخيك الإنسان: "أنا معك." الصدقة لا تُنقص مالك، بل تزيدك بركة وسكينة وسرورًا لا يُشترى. امنح مما تحب، فإن ما تعطيه يعود إليك أضعافًا بوجهٍ آخر.',
+            'description_en' => 'Sadaqah is not just giving — it’s offering hope, silently and sincerely. When you give, you water a thirsty soul, brighten a dark path, and whisper to someone in pain: You are not alone. Sadaqah doesn’t diminish wealth — it multiplies peace, joy, and unseen blessings. Give from the heart, and watch the world bloom.',
             'image' => 'boxes/sadaqah.jpg',
             'price' => null,
 
@@ -156,15 +149,8 @@ class BoxSeeder extends Seeder
             'box_id' => null,
             'name_ar' => 'الزكاة',
             'name_en' => 'Zakat',
-            'description_ar' => ' "الزكاة عهد بينك وبين الله، تطهّر به مالك، وتزكي به روحك."
-هي ليست عبئًا، بل رسالة سامية تقول فيها: "مالي ليس لي وحدي."
-بالزكاة، يشبع جائع، ويُداوى مريض، ويشعر الفقير أنه مرئي ومحبوب.
-زكاتك نبض رحمة في جسد المجتمع، فلا تؤخرها.
-            ',
-            'description_en' => ' "Zakat is a sacred covenant between you and God — it purifies your wealth and elevates your soul."
-            It’s not a burden, but a message: My wealth belongs not only to me.
-            Through Zakat, the hungry are fed, the sick are healed, and the forgotten feel seen and loved.
-            Your Zakat is the heartbeat of mercy in a wounded world. Give it now.',
+            'description_ar' => 'الزكاة عهد بينك وبين الله، تطهّر به مالك، وتزكي به روحك. هي ليست عبئًا، بل رسالة سامية تقول فيها: "مالي ليس لي وحدي". بالزكاة، يشبع جائع، ويُداوى مريض، ويشعر الفقير أنه مرئي ومحبوب.زكاتك نبض رحمة في جسد المجتمع، فلا تؤخرها.',
+            'description_en' => 'Zakat is a sacred covenant between you and God — it purifies your wealth and elevates your soul. It’s not a burden, but a message: My wealth belongs not only to me. Through Zakat, the hungry are fed, the sick are healed, and the forgotten feel seen and loved. Your Zakat is the heartbeat of mercy in a wounded world. Give it now.',
             'image' => 'boxes/zakah.jpg',
             'price' => null,
         ]);

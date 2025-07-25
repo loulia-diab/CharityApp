@@ -10,8 +10,10 @@ use Illuminate\Database\Seeder;
 
 class BeneficiarySeeder extends Seeder
 {
+
     public function run()
     {
+
         $beneficiaryRequests = Beneficiary_request::all();
         $users = User::all();
 

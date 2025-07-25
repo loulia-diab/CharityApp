@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Plan;
+use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -13,16 +14,16 @@ class ProcessRecurringDonations implements ShouldQueue
     use Queueable;
     public function __construct()
     {
-        //
     }
 
     public function handle(): void
     {
         $now = Carbon::now();
 
-        // بنجيب كل الخطط المفعلة يلي لازم تنسحب اليوم أو قبل (بسبب تأخير)
+        // جلب الخطط المفعلة التي انتهت مواعيدها أو اليوم (لتفادي التأخير)
         $plans = Plan::where('is_activated', true)
-            ->whereDate('end_date', '<=', $now)
+            ->whereDate('end_date', '<=', $now->startOfDay())
+            ->with('user', 'sponsorship.campaign')
             ->get();
 
         foreach ($plans as $plan) {
@@ -30,37 +31,43 @@ class ProcessRecurringDonations implements ShouldQueue
 
             try {
                 $user = $plan->user;
+                $isSponsorship = !is_null($plan->sponsorship_id);
+                $campaign = $isSponsorship ? $plan->sponsorship->campaign : null;
 
-                // تحقق من وجود رصيد كافي
-                if ($user->wallet_balance < $plan->amount) {
-                    // ممكن لاحقًا تبعتي إشعار للمستخدم بهالحالة
+                // إذا الكفالة مكتملة ما نكمل (توقف التكرار)
+                if ($isSponsorship && $campaign && $campaign->status === 'completed') {
                     DB::commit();
                     continue;
                 }
 
-                // سحب من المحفظة
-                $user->wallet_balance -= $plan->amount;
+                // تحقق من رصيد المستخدم
+                if ($user->balance < $plan->amount) {
+                    DB::commit(); // نتخطى الخطة بدون خطأ
+                    continue;
+                }
+
+                // خصم الرصيد من المحفظة
+                $user->balance -= $plan->amount;
                 $user->save();
 
-                // سجل العملية المالية (سحب من المحفظة)
-                Transaction::create([
+                // إنشاء معاملة واحدة فقط (direction = in)
+                $transactionData = [
                     'user_id' => $user->id,
                     'amount' => $plan->amount,
-                    'type' => TransactionType::IN->value, // سحب من المحفظة
-                    'description' => 'خصم تلقائي لخطة التبرع',
-                ]);
+                    'type' => 'donation',
+                    'direction' => 'in',
+                ];
 
-                // سجل العملية المالية (دفع للجمعية أو الكفالة)
-                Transaction::create([
-                    'user_id' => $user->id,
-                    'amount' => $plan->amount,
-                    'type' => TransactionType::OUT->value, // دفع للجمعية
-                    'description' => $plan->sponsorship_id
-                        ? 'دفع تلقائي لخطة كفالة'
-                        : 'دفع تلقائي لخطة تبرع عام',
-                ]);
+                if ($isSponsorship) {
+                    $transactionData['campaign_id'] = $campaign->id ?? null;
+                } else {
+                    $generalDonationBoxId = 8;
+                    $transactionData['box_id'] = $generalDonationBoxId;
+                }
 
-                // حدث end_date للخطة حسب نوع التكرار
+                $transaction = Transaction::create($transactionData);
+
+                // تحديث تاريخ بداية ونهاية الخطة
                 $nextDate = match ($plan->recurrence) {
                     'daily' => $now->copy()->addDay(),
                     'weekly' => $now->copy()->addWeek(),
@@ -68,16 +75,37 @@ class ProcessRecurringDonations implements ShouldQueue
                     default => $now->copy()->addMonth(),
                 };
 
+                $plan->start_date ??= $now;
                 $plan->end_date = $nextDate;
-                $plan->start_date ??= $now; // لأول مرة فقط
                 $plan->save();
 
+                // إذا هي كفالة، نحدث المبلغ المجمّع والحالة
+                if ($isSponsorship && $campaign) {
+                    $totalCollected = Plan::where('sponsorship_id', $plan->sponsorship_id)
+                        ->where('is_activated', true)
+                        ->sum('amount');
+
+                    $campaign->collected_amount = $totalCollected;
+
+                    if ($totalCollected >= $campaign->goal_amount) {
+                        $campaign->status = 'completed';
+                        $campaign->completed_at = now();
+                    }
+
+                    $campaign->save();
+                }
+
                 DB::commit();
+
+                // ممكن تستخدم روابط الـ PDF هنا لو بدك
+                // $pdfUrl = $transaction->pdf_url;
+
             } catch (\Throwable $e) {
                 DB::rollBack();
                 \Log::error("Recurring donation failed for plan ID {$plan->id}: " . $e->getMessage());
             }
         }
     }
+
 
 }

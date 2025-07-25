@@ -24,15 +24,15 @@ class PlanController extends Controller
         $sponsorship = Sponsorship::findOrFail($sponsorshipId);
 
         // تحقق من وجود قيمة amount في الطلب
-        $request->validate([
-            'amount' => 'required|numeric|min:1',
-        ]);
+      //  $request->validate([
+      //      'amount' => 'required|numeric|min:1',
+     //   ]);
 
         // إنشاء الخطة
         $plan = Plan::create([
             'user_id' => $user->id,
             'sponsorship_id' => $sponsorship->id,
-            'amount' => $request->amount,
+            'amount' => null,
             'recurrence' => 'monthly',
             'is_activated' => false,
             'start_date' => now(),
@@ -167,6 +167,118 @@ class PlanController extends Controller
             return response()->json([
                 'message' => $locale === 'ar' ? 'حدث خطأ أثناء التفعيل' : 'Error during activation',
                 'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function createAndActivatePlanForSponsorship(Request $request, $sponsorshipId)
+    {
+        $user = auth()->user();
+        $locale = app()->getLocale();
+
+        // تحقق من وجود الكفالة
+        $sponsorship = Sponsorship::findOrFail($sponsorshipId);
+
+        // تحقق من صحة المبلغ
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        $amountToPay = $request->input('amount');
+
+        $campaign = $sponsorship->campaign;
+
+        if ($campaign->status === 'complete' || $campaign->collected_amount >= $campaign->goal_amount) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الكفالة مكتملة ولا يمكن إنشاء خطط جديدة.' : 'Sponsorship is completed, no new plans can be created.'
+            ], 422);
+        }
+
+        if ($user->balance < $amountToPay) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'رصيد المحفظة غير كافٍ لتفعيل الخطة.' : 'Insufficient wallet balance to activate the plan.',
+                'wallet_balance' => $user->balance,
+                'required_amount' => $amountToPay
+            ], 422);
+        }
+
+        $totalActiveAmount = Plan::where('sponsorship_id', $sponsorship->id)
+            ->where('is_activated', true)
+            ->sum('amount');
+
+        $remaining = $campaign->goal_amount - $totalActiveAmount;
+
+        if ($amountToPay > $remaining) {
+            return response()->json([
+                'message' => $locale === 'ar'
+                    ? "تجاوزت المبلغ المطلوب للكفالة. المتبقي: $remaining"
+                    : "Sponsorship goal exceeded. Remaining amount: $remaining",
+                'remaining_amount' => $remaining
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // إنشاء الخطة مفعلة مباشرة
+            $plan = Plan::create([
+                'user_id' => $user->id,
+                'sponsorship_id' => $sponsorship->id,
+                'amount' => $amountToPay,
+                'recurrence' => 'monthly',
+                'is_activated' => true,
+                'start_date' => now(),
+                'end_date' => now()->addMonth(),
+            ]);
+
+            // خصم الرصيد من المستخدم
+            $user->balance -= $amountToPay;
+            $user->save();
+
+            // إنشاء معاملة ترانزاكشن (donation / in)
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'amount' => $amountToPay,
+                'type' => 'donation',
+                'direction' => 'in',
+                'campaign_id' => $campaign->id,
+            ]);
+
+            // تحديث مبلغ الحملة المجموع
+            $campaign->collected_amount += $amountToPay;
+            if ($campaign->collected_amount >= $campaign->goal_amount) {
+                $campaign->status = 'complete';
+                $campaign->completed_at = now();
+            }
+            $campaign->save();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم إنشاء وتفعيل خطة الكفالة بنجاح' : 'Sponsorship plan created and activated successfully',
+                'data' => [
+                    'plan' => $plan,
+                    'campaign' => [
+                        'goal_amount' => (float) $campaign->goal_amount,
+                        'collected_amount' => (float) $campaign->collected_amount,
+                        'remaining_amount' => max(0, (float) $campaign->goal_amount - (float) $campaign->collected_amount),
+                        'status' => $campaign->status,
+                    ],
+                    'transaction' => [
+                        'id' => $transaction->id,
+                        'amount' => $transaction->amount,
+                        'type' => $transaction->type,
+                        'direction' => $transaction->direction,
+                        'pdf_url' => $transaction->pdf_url ?? null,
+                        'created_at' => $transaction->created_at,
+                    ],
+                ],
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إنشاء الخطة' : 'Error during plan creation',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

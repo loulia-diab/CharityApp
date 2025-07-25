@@ -192,8 +192,8 @@ Route::get('/beneficiary/{beneficiaryId}/campaigns', [BeneficiaryController::cla
 Route::get('/volunteer/{volunteerId}/campaigns', [VolunteerController::class, 'getVolunteerCampaigns']);
 // الدوري (كفالة)
 Route::prefix('plans')->group(function () {
-    Route::post('/create/forSponsorship/{sponsorshipId}', [PlanController::class,'createPlanForSponsorship']);
-    Route::post('/activate/{planId}', [PlanController::class, 'activatePlan']);
+    Route::post('/create/forSponsorship/{sponsorshipId}', [PlanController::class,'createAndActivatePlanForSponsorship']);
+  //  Route::post('/activate/{planId}', [PlanController::class, 'activatePlan']);
     Route::post('/deactivate/{planId}', [PlanController::class, 'deactivatePlan']);
     Route::post('/reactivate/{planId}', [PlanController::class, 'reactivatePlan']);
 

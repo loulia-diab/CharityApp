@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('profile_image')->nullable();
             $table->string('preferred_language')->nullable();
-            $table->decimal('balance', 10, 2)->default(0);
+            $table->decimal('balance')->default(0);
             $table->rememberToken();
             $table->timestamps();
         });

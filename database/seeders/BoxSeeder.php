@@ -30,7 +30,7 @@ class BoxSeeder extends Seeder
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Feeding_A_Poor.jpg',
-            'price' => '3.00',
+            'price' => '3',
 
         ]);
 
@@ -41,7 +41,7 @@ class BoxSeeder extends Seeder
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Clothing_A_Poor.jpg',
-            'price' => '10.00',
+            'price' => '10',
 
         ]);
 
@@ -52,7 +52,7 @@ class BoxSeeder extends Seeder
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Expiation_for_Breaking_an_Oath.jpg',
-            'price' => '15.00',
+            'price' => '15',
 
         ]);
 
@@ -63,7 +63,7 @@ class BoxSeeder extends Seeder
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Fulfillment_of_a_Vow.jpg',
-            'price' => '20.00',
+            'price' => '20',
 
         ]);
 
@@ -74,7 +74,7 @@ class BoxSeeder extends Seeder
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Sacrifice.jpg',
-            'price' => '160.00',
+            'price' => '160',
 
         ]);
 
@@ -85,7 +85,7 @@ class BoxSeeder extends Seeder
             'description_ar' => null,
             'description_en' => null,
             'image' => 'boxes/Aqiqah.jpg',
-            'price' => '130.00',
+            'price' => '130',
 
         ]);
 

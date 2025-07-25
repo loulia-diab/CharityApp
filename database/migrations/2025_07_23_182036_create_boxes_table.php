@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('description_en')->nullable();
             $table->string('image')->nullable();
             $table->string('price')->nullable();
-            $table->decimal('balance', 10, 2)->default(0);
+            $table->decimal('balance')->default(0);
             $table->timestamps();
         });
     }

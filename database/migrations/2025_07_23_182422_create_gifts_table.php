@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('recipient_name');
             $table->string('recipient_phone');
             $table->boolean('is_hide');
-            $table->text('message');
+            $table->text('message')->nullable();
             $table->timestamps();
         });
     }

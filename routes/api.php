@@ -89,6 +89,7 @@ Route::prefix('beneficiary_request')->group(function () {
 Route::prefix('transaction')->group(function () {
     Route::post('recharge', [TransactionController::class, 'rechargeUserBalance']);
     Route::post('donateAsGift', [TransactionController::class, 'donateAsGift']);
+    Route::post('donateOnceTime', [TransactionController::class, 'donate']);
 });
 
 Route::prefix('category')->group(function () {

@@ -11,6 +11,7 @@
             font-style: normal;
         }
 
+
         body {
             font-family: 'amiri', serif;
             direction: {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }};

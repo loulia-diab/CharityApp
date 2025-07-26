@@ -63,7 +63,7 @@ class InKindBeneficiaryController extends Controller
             'data' => $inKind->beneficiaries->map(function ($beneficiary) {
                 return [
                     'id' => $beneficiary->id,
-                    'name' => $beneficiary->name,
+                    'name' => $beneficiary->beneficiary_request->name,
                     // أضف الحقول التي تحتاجها مثل العمر، الجنس، وغيرها
                     // 'age' => $beneficiary->age,
                     // 'gender' => $beneficiary->gender,

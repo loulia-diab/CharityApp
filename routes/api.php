@@ -47,6 +47,7 @@ Route::prefix('user')->group(function () {
         Route::post('/changePassword', [UserController::class, 'changePassword']);
         Route::get('/getAll', [UserController::class, 'getAllUsers']);
         Route::get('/getMyRecharges', [UserController::class, 'getMyRecharges']);
+        Route::get('/getMyGiftDonations', [UserController::class, 'getMyGiftDonations']);
     });
 });
 

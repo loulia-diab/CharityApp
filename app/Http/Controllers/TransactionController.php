@@ -91,7 +91,6 @@ class TransactionController extends Controller
                     'type'        => 'donation',
                     'direction'   => 'in',
                     'amount'      => $validated['amount'],
-                    'pdf_url'     => null,
                 ]);
 
                 // إنشاء الهدية المرتبطة بالعملية
@@ -185,7 +184,6 @@ class TransactionController extends Controller
                         'type'       => 'donation',
                         'direction'  => 'in',
                         'amount'     => $amount,
-                        'pdf_url'    => null,
                     ]);
 
                     // تحديث الجهة المستفيدة

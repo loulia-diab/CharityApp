@@ -58,6 +58,15 @@ return [
             ],
             // الخطوط الافتراضية...
         ],
+        'custom_font_dir' => storage_path('fonts/'),
+        'custom_font_data' => [
+            'amiri' => [
+                'R'  => 'Amiri-Regular.ttf',
+                'useOTL' => 0xFF,
+                'useKashida' => 75,
+            ],
+        ],
+
 
 
         /**

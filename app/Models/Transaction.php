@@ -45,11 +45,7 @@ class Transaction extends Model
     protected static function booted()
     {
         static::created(function ($transaction) {
-            $pdf = Pdf::loadView('pdf.transaction_receipt', ['transaction' => $transaction])
-                ->setOption('enable_rtl', true)
-                ->setOption('isHtml5ParserEnabled', true)
-                ->setOption('isPhpEnabled', true)
-                ->setOption('defaultFont', 'Amiri'); // لو ضبطت اسم الخط
+            $pdf = Pdf::loadView('pdf.transaction_receipt', ['transaction' => $transaction]);
 
             $fileName = 'receipts/transaction_' . $transaction->id . '.pdf';
 

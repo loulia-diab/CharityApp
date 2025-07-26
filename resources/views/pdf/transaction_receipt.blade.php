@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <style>
-        /* تعريف الخط Amiri */
         @font-face {
             font-family: 'Amiri';
             src: url("{{ asset('storage/fonts/Amiri-Regular.ttf') }}") format('truetype');
             font-weight: normal;
             font-style: normal;
         }
-
-
         body {
             font-family: 'amiri', serif;
             direction: {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }};
@@ -86,70 +83,70 @@
 <body>
 
 <h3>جمعية كن عوناً</h3>
-<h1>{{ app()->getLocale() === 'ar' ? 'وصل المعاملة' : 'Transaction Receipt' }}</h1>
+<h1> Transaction Receipt </h1>
 
 <table>
     @php
         $locale = app()->getLocale();
         $types = [
-            'donation' => $locale === 'ar' ? 'تبرع' : 'Donation',
-            'exchange' => $locale === 'ar' ? 'مصروف' : 'Exchange',
-            'recharge' => $locale === 'ar' ? 'شحن' : 'Recharge',
+            'donation'=> 'Donation',
+            'exchange' =>  'Exchange',
+            'recharge' =>  'Recharge',
         ];
         $directions = [
-            'in' => $locale === 'ar' ? 'وارد' : 'In',
-            'out' => $locale === 'ar' ? 'صادر' : 'Out',
+            'in' =>  'In',
+            'out' =>  'Out',
         ];
     @endphp
 
     <tr>
-        <th>{{ $locale === 'ar' ? 'رقم المعاملة' : 'Transaction ID' }}</th>
+        <th>Transaction ID</th>
         <td>{{ $transaction->id }}</td>
     </tr>
     <tr>
-        <th>{{ $locale === 'ar' ? 'نوع العملية' : 'Transaction Type' }}</th>
+        <th> Transaction Type  </th>
         <td>{{ $types[$transaction->type] ?? $transaction->type }}</td>
     </tr>
     <tr>
-        <th>{{ $locale === 'ar' ? 'الوجهة' : 'Direction' }}</th>
+        <th> Direction </th>
         <td>{{ $directions[$transaction->direction] ?? $transaction->direction }}</td>
     </tr>
     <tr>
-        <th>{{ $locale === 'ar' ? 'المبلغ' : 'Amount' }}</th>
-        <td>{{ number_format($transaction->amount, 2) }} {{ $locale === 'ar' ? 'دولار' : '$' }}</td>
+        <th> Amount </th>
+        <td>{{ number_format($transaction->amount, 2) }} $ </td>
     </tr>
     <tr>
-        <th>{{ $locale === 'ar' ? 'تاريخ المعاملة' : 'Transaction Date' }}</th>
-        <td>{{ $transaction->created_at->translatedFormat($locale === 'ar' ? 'd/m/Y H:i' : 'Y-m-d H:i') }}</td>
+        <th> Transaction Date </th>
+        <td>{{ $transaction->created_at->translatedFormat('Y-m-d H:i') }}</td>
     </tr>
     @if($transaction->user)
         <tr>
-            <th>{{ $locale === 'ar' ? 'المستخدم' : 'User' }}</th>
-            <td>{{ $transaction->user->name }}</td>
+            <th>User</th>
+            <td>{{ $transaction->user->name}}</td>
         </tr>
     @endif
     @if($transaction->admin)
         <tr>
-            <th>{{ $locale === 'ar' ? 'المسؤول' : 'Admin' }}</th>
-            <td>{{ $transaction->admin->name }}</td>
+            <th> Admin </th>
+            <td>{{ $transaction->admin->id }}</td>
         </tr>
     @endif
     @if($transaction->campaign)
         <tr>
-            <th>{{ $locale === 'ar' ? 'الحملة' : 'Campaign' }}</th>
-            <td>{{ $locale === 'ar' ? $transaction->campaign->title_ar ?? $transaction->campaign->title_en : $transaction->campaign->title_en }}</td>
+            <th> Campaign</th>
+            <td>{{ $transaction->campaign->title_en}}</td>
         </tr>
     @endif
     @if($transaction->box)
         <tr>
-            <th>{{ $locale === 'ar' ? 'الصندوق' : 'Box' }}</th>
+            <th>Box</th>
             <td>{{ $transaction->box->name }}</td>
         </tr>
     @endif
 </table>
 
 <div class="signature">
-    {{ $locale === 'ar' ? 'توقيع الجمعية' : 'Organization Signature' }}
+    Organization Signature
     <div class="line"></div>
 </div>
 <div class="signature" style="margin-top: 60px; text-align: {{ $locale === 'ar' ? 'right' : 'left' }}; font-family: cursive; font-size: 24px; color: #000;">
@@ -158,10 +155,7 @@
 </div>
 
 <footer>
-    {{ $locale === 'ar'
-        ? 'شكرًا لاستخدامكم نظام التبرعات الخاص بنا.'
-        : 'Thank you for using our donation system.'
-    }}
+    'Thank you for using our donation system.'
 </footer>
 
 </body>

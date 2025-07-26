@@ -426,7 +426,6 @@ class PlanController extends Controller
                 'id' => $plan->id,
                 'amount' => $plan->amount,
                 'recurrence' => $plan->recurrence,
-                'is_activated' => $plan->is_activated,
                 'start_date' => $plan->start_date ? Carbon::parse($plan->start_date)->format('Y-m-d') : null,
                 'end_date' => $plan->end_date ? Carbon::parse($plan->end_date)->format('Y-m-d') : null,
                 'sponsorship' => [

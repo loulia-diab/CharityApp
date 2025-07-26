@@ -49,7 +49,7 @@ class Transaction extends Model
                 ->setOption('enable_rtl', true)
                 ->setOption('isHtml5ParserEnabled', true)
                 ->setOption('isPhpEnabled', true)
-                ->setOption('defaultFont', 'amiri'); // لو ضبطت اسم الخط
+                ->setOption('defaultFont', 'Amiri'); // لو ضبطت اسم الخط
 
             $fileName = 'receipts/transaction_' . $transaction->id . '.pdf';
 

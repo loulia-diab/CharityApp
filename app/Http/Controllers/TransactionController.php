@@ -7,6 +7,7 @@ use App\Models\Campaigns\Campaign;
 use App\Models\Gift;
 use App\Models\Transaction;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -24,27 +25,35 @@ class TransactionController extends Controller
 
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'amount'  => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:1',
         ]);
 
-        return DB::transaction(function () use ($admin, $request) {
-            $user = User::findOrFail($request->user_id);
+        try {
+            return DB::transaction(function () use ($admin, $request) {
+                $user = User::findOrFail($request->user_id);
 
-            $user->increment('balance', $request->amount);
+                $user->increment('balance', $request->amount);
 
-            $transaction = Transaction::create([
-                'user_id'   => $user->id,
-                'admin_id'  => $admin->id,
-                'type'      => 'recharge',
-                'direction' => 'in',
-                'amount'    => $request->amount,
-            ]);
+                $transaction = Transaction::create([
+                    'user_id' => $user->id,
+                    'admin_id' => $admin->id,
+                    'type' => 'recharge',
+                    'direction' => 'in',
+                    'amount' => $request->amount,
+                ]);
 
+                return response()->json([
+                    'message' => 'تم شحن الرصيد بنجاح.',
+                    'transaction' => $transaction,
+                ]);
+            });
+
+        } catch (Exception $e) {
             return response()->json([
-                'message'     => 'تم شحن الرصيد بنجاح.',
-                'transaction' => $transaction,
-            ]);
-        });
+                'message' => 'حدث خطأ أثناء شحن الرصيد.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function donateAsGift(Request $request)
@@ -57,11 +66,11 @@ class TransactionController extends Controller
             }
 
             $validated = $request->validate([
-                'amount'          => 'required|numeric|min:1',
-                'recipient_name'  => 'required|string|max:255',
+                'amount' => 'required|numeric|min:1',
+                'recipient_name' => 'required|string|max:255',
                 'recipient_phone' => 'required|string|max:20',
-                'message'         => 'nullable|string',
-                'is_hide'         => 'nullable|boolean',
+                'message' => 'nullable|string',
+                'is_hide' => 'nullable|boolean',
             ]);
 
             if ($user->balance < $validated['amount']) {
@@ -84,28 +93,28 @@ class TransactionController extends Controller
 
                 // إنشاء عملية التبرع
                 $transaction = Transaction::create([
-                    'user_id'     => $user->id,
-                    'admin_id'    => null,
+                    'user_id' => $user->id,
+                    'admin_id' => null,
                     'campaign_id' => null,
-                    'box_id'      => $box->id,
-                    'type'        => 'donation',
-                    'direction'   => 'in',
-                    'amount'      => $validated['amount'],
+                    'box_id' => $box->id,
+                    'type' => 'donation',
+                    'direction' => 'in',
+                    'amount' => $validated['amount'],
                 ]);
 
                 // إنشاء الهدية المرتبطة بالعملية
                 $gift = Gift::create([
-                    'user_id'         => $user->id,
-                    'transaction_id'  => $transaction->id,
-                    'recipient_name'  => $validated['recipient_name'],
+                    'user_id' => $user->id,
+                    'transaction_id' => $transaction->id,
+                    'recipient_name' => $validated['recipient_name'],
                     'recipient_phone' => $validated['recipient_phone'],
-                    'is_hide'         => $validated['is_hide'] ?? false,
-                    'message'         => $validated['message'] ?? null,
+                    'is_hide' => $validated['is_hide'] ?? false,
+                    'message' => $validated['message'] ?? null,
                 ]);
 
                 return response()->json([
                     'message' => 'تم التبرع كهدية بنجاح.',
-                    'gift'    => $gift,
+                    'gift' => $gift,
                 ], 201);
             });
 
@@ -113,7 +122,7 @@ class TransactionController extends Controller
             // أخطاء التحقق من البيانات
             return response()->json([
                 'message' => 'البيانات غير صحيحة',
-                'errors'  => $e->errors(),
+                'errors' => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -122,7 +131,7 @@ class TransactionController extends Controller
 
             return response()->json([
                 'message' => 'حدث خطأ أثناء معالجة الطلب.',
-                'error'   => $e->getMessage(), // احذف هذا في بيئة الإنتاج
+                'error' => $e->getMessage(), // احذف هذا في بيئة الإنتاج
             ], 500);
         }
     }
@@ -177,13 +186,13 @@ class TransactionController extends Controller
 
                     // إنشاء العملية
                     $transaction = Transaction::create([
-                        'user_id'    => $user->id,
-                        'admin_id'   => null,
-                        'campaign_id'=> $campaignId,
-                        'box_id'     => $boxId,
-                        'type'       => 'donation',
-                        'direction'  => 'in',
-                        'amount'     => $amount,
+                        'user_id' => $user->id,
+                        'admin_id' => null,
+                        'campaign_id' => $campaignId,
+                        'box_id' => $boxId,
+                        'type' => 'donation',
+                        'direction' => 'in',
+                        'amount' => $amount,
                     ]);
 
                     // تحديث الجهة المستفيدة

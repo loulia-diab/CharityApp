@@ -47,4 +47,5 @@ class Plan extends Model
     {
         return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
     }
+
 }

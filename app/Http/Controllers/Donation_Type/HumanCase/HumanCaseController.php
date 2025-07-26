@@ -1101,6 +1101,7 @@ class HumanCaseController extends Controller
                     'goal_amount' => $campaign->goal_amount,
                     'collected_amount' => $campaign->collected_amount,
                     'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
+                    'campaign_id'=>$campaign->id,
                 ],
                 'status' => 200
             ]);
@@ -1160,6 +1161,7 @@ class HumanCaseController extends Controller
                     'goal_amount' => $campaign->goal_amount,
                     'collected_amount' => $campaign->collected_amount,
                     'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
+                    'campaign_id'=>$campaign->id,
                 ],
                 'status' => 200
             ]);

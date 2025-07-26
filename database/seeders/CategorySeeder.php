@@ -28,6 +28,14 @@ class CategorySeeder extends Seeder
             ['main_category'=>'Sponsorship','name_category_en' => 'Orphan',        'name_category_ar' => 'يتيم'],
             ['main_category'=>'Sponsorship','name_category_en' => 'Poor Families', 'name_category_ar' => 'أسر فقيرة'],
             ['main_category'=>'Sponsorship','name_category_en' => 'Student',       'name_category_ar' => 'طالب علم'],
+
+            //
+
+            ['main_category'=>'InKind','name_category_en' => 'Children Toys','name_category_ar' => 'ألعاب أطفال'],
+            ['main_category'=>'InKind','name_category_en' => 'Furniture',    'name_category_ar' => 'أثاث'],
+            ['main_category'=>'InKind','name_category_en' => 'Electronics',  'name_category_ar' => 'إلكترونيات'],
+            ['main_category'=>'InKind','name_category_en' => 'Clothes',      'name_category_ar' => 'ملابس'],
+            ['main_category'=>'InKind','name_category_en' => 'Others',       'name_category_ar' => 'أخرى'],
         ];
 
         foreach ($categories as $category) {

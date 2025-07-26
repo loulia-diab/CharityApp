@@ -393,7 +393,7 @@ class CampaignController extends Controller
                         'status' => $campaign->status,
                         'status_label' => $campaign->status->label($locale),
                         'image' => $campaign->image,
-                        'created_at' => $campaign->created_at->format('Y-m-d H:i:s'),
+                        'created_at' => $campaign->created_at,
                     ];
                 });
 

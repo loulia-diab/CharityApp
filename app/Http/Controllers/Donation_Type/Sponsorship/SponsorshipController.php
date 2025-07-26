@@ -670,8 +670,7 @@ class SponsorshipController extends Controller
     {
         try {
             $locale = app()->getLocale();
-
-            $sponsorship = Sponsorship::with('campaign.category', 'beneficiary')
+            $sponsorship = Sponsorship::with('campaign.category', 'beneficiary.beneficiary_request')
                 ->where('id', $id)
                 ->whereHas('campaign', function ($query) use ($mainCategory) {
                     $query->whereColumn('collected_amount', '<', 'goal_amount')
@@ -684,24 +683,28 @@ class SponsorshipController extends Controller
 
             $campaign = $sponsorship->campaign;
             $category = $campaign?->category;
-            $beneficiary = $sponsorship->beneficiary->beneficiary_request;
-
+            $beneficiary = $sponsorship->beneficiary;
             return response()->json([
-                'message' => $locale === 'ar' ? 'تم جلب الكفالة بنجاح' : 'Visible sponsorship fetched successfully',
+                'message' => $locale === 'ar' ? 'تم جلب تفاصيل الكفالة بنجاح' : 'Sponsorship fetched successfully',
+                'status' => 200,
                 'data' => [
                     'id' => $sponsorship->id,
-                    'category_id' => $campaign?->category_id,
-                    'category_name' => $locale === 'ar' ? ($category?->name_category_ar ?? '') : ($category?->name_category_en ?? ''),
+                    'beneficiary_id' => $sponsorship->beneficiary_id,
+                    'gender' => $locale === 'ar' ? $beneficiary?->beneficiary_request?->gender_ar : $beneficiary?->beneficiary_request?->gender_en,
+                    'birth_date' => $beneficiary?->beneficiary_request?->birth_date,
+                    'type' => $locale === 'ar' ? $campaign->category?->name_category_ar : $campaign->category?->name_category_en,
+
                     'title' => $locale === 'ar' ? $campaign?->title_ar : $campaign?->title_en,
                     'description' => $locale === 'ar' ? $campaign?->description_ar : $campaign?->description_en,
-                    'monthly_amount' => $campaign?->goal_amount,
-                    'remaining_amount' => max(0, $campaign?->goal_amount - $campaign?->collected_amount),
-                    'image' => $campaign?->image,
-                    'beneficiary_gender' => $locale === 'ar' ? ($beneficiary?->gender_ar ?? '') : ($beneficiary?->gender_en ?? ''),
-                    'beneficiary_birth_date' => $beneficiary?->birth_date ?? null,
-                ],
-                'status' => 200,
+                    'goal_amount' => $campaign?->goal_amount,
+                    'collected_amount' => $campaign?->collected_amount,
+                    'status' => $campaign?->status,
+                    'image' => $campaign?->image ?? null,
+                    'created_at' => $campaign?->created_at,
+                    'campaign_id'=>$campaign->id,
+                ]
             ]);
+
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([

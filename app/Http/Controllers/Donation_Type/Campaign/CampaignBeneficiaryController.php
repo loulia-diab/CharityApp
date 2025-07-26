@@ -44,7 +44,7 @@ class CampaignBeneficiaryController extends Controller
             return response()->json([
                 'message' => $locale === 'ar' ? 'تمت إضافة المستفيدين بنجاح' : 'Beneficiaries added successfully',
                 'status' => 200,
-                'data' => ''
+                'data' => array_keys($syncData)
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -61,26 +61,53 @@ class CampaignBeneficiaryController extends Controller
         }
     }
 
-    public function removeBeneficiaryFromCampaign($campaignId, $beneficiaryId)
+    public function removeBeneficiariesFromCampaign(Request $request, $campaignId)
     {
         $locale = app()->getLocale();
 
-        $campaign = Campaign::with('category')->find($campaignId);
-
-        if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
+        $admin = auth('admin')->user();
+        if (!$admin) {
             return response()->json([
-                'message' => $locale === 'ar' ? 'الحملة غير موجودة أو غير صالحة' : 'Campaign not found or invalid',
-                'status' => 404
-            ], 404);
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized'
+            ], 401);
         }
 
-        $campaign->beneficiaries()->detach($beneficiaryId);
-
-        return response()->json([
-            'message' => $locale === 'ar' ? 'تمت إزالة المستفيد من الحملة بنجاح' : 'Beneficiary removed from campaign',
-            'status' => 200
+        $request->validate([
+            'beneficiary_ids' => 'required|array',
+            'beneficiary_ids.*' => 'exists:beneficiaries,id',
         ]);
+
+        try {
+            $campaign = Campaign::with('category')->findOrFail($campaignId);
+
+            if (!$campaign->category || $campaign->category->main_category !== 'Campaign') {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'الحملة غير صحيحة أو ليست من نوع حملة' : 'Invalid or non-campaign category',
+                ], 404);
+            }
+
+            $campaign->beneficiaries()->detach($request->beneficiary_ids);
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تمت إزالة المستفيدين بنجاح' : 'Beneficiaries removed successfully',
+                'status' => 200,
+                'data' => $request->beneficiary_ids
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة' : 'Campaign not found',
+                'status' => 404
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إزالة المستفيدين' : 'Error removing beneficiaries',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ], 500);
+        }
     }
+
 
     public function getCampaignBeneficiaries($campaignId)
     {

@@ -441,7 +441,7 @@ class PlanController extends Controller
                         'amount' => $t->amount,
                         'type' => $t->type,
                         'direction' => $t->direction,
-                        'pdf_url' => $t->pdf_url ? asset('storage/' . $t->pdf_url) : null,
+                        'pdf_url' => $t->pdf_url ?? null,
                         'date' => $t->created_at->format('Y-m-d'),
                     ];
                 }),
@@ -463,7 +463,7 @@ class PlanController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
         $plans = Plan::whereNotNull('sponsorship_id')
-            ->with(['user:id,name,email', 'sponsorship:id,title_ar,title_en'])
+            ->with(['user:id,name,email', 'sponsorship:id'])
             ->latest('created_at')
             ->get();
 
@@ -478,7 +478,7 @@ class PlanController extends Controller
                 'user' => $plan->user,
                 'sponsorship' => [
                     'id' => $plan->sponsorship->id,
-                    'title' => $locale === 'ar' ? $plan->sponsorship->title_ar : $plan->sponsorship->title_en,
+                   // 'title' => $locale === 'ar' ? $plan->sponsorship->title_ar : $plan->sponsorship->title_en,
                 ]
             ];
         });

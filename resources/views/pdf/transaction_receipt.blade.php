@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8" />
     <style>
+        /* تعريف الخط Amiri */
         @font-face {
-            font-family: 'DejaVuSans';
-            src: url("{{ storage_path('fonts/DejaVuSans.ttf') }}") format('truetype');
+            font-family: 'Amiri';
+            src: url("{{ asset('storage/fonts/Amiri-Regular.ttf') }}") format('truetype');
             font-weight: normal;
             font-style: normal;
         }
 
         body {
-            font-family: 'DejaVuSans', sans-serif;
+            font-family: 'amiri', serif;
             direction: {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }};
             margin: 30px;
             color: #000;
@@ -83,7 +84,7 @@
 </head>
 <body>
 
-<h3>{{ 'جمعية كن عوناً' }}</h3>
+<h3>جمعية كن عوناً</h3>
 <h1>{{ app()->getLocale() === 'ar' ? 'وصل المعاملة' : 'Transaction Receipt' }}</h1>
 
 <table>

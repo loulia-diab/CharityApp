@@ -76,9 +76,14 @@ class CampaignVolunteerController extends Controller
     }
 
 
-    public function removeVolunteerFromCampaign($campaignId, $volunteerId)
+    public function removeVolunteersFromCampaign(Request $request, $campaignId)
     {
         $locale = app()->getLocale();
+
+        $request->validate([
+            'volunteer_ids' => 'required|array',
+            'volunteer_ids.*' => 'exists:volunteers,id',
+        ]);
 
         $admin = auth('admin')->user();
         if (!$admin) {
@@ -94,12 +99,22 @@ class CampaignVolunteerController extends Controller
             ], 404);
         }
 
-        $campaign->volunteers()->detach($volunteerId);
+        try {
+            $campaign->volunteers()->detach($request->volunteer_ids);
 
-        return response()->json([
-            'message' => $locale === 'ar' ? 'تمت إزالة المتطوع بنجاح' : 'Volunteer removed successfully',
-            'status' => 200,
-        ]);
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تمت إزالة المتطوعين بنجاح' : 'Volunteers removed successfully',
+                'status' => 200,
+                'data' => $request->volunteer_ids
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إزالة المتطوعين' : 'Error removing volunteers',
+                'error' => $e->getMessage(),
+                'status' => 500,
+            ], 500);
+        }
     }
+
 
 }

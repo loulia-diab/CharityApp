@@ -294,7 +294,7 @@ class InKindController extends Controller
                 $campaign->save();
             }
 
-            $inKind->status = 'active';
+          //  $inKind->status = 'active';
             $inKind->save();
 
             Transaction::create([
@@ -304,6 +304,7 @@ class InKindController extends Controller
                 'box_id'      => null,
                 'type'        => 'donation',
                 'direction'   => 'in',
+                'amount'=>0
             ]);
 
             DB::commit();
@@ -321,7 +322,8 @@ class InKindController extends Controller
             ], 500);
         }
     }
-    public function getAllInKinds() {
+    public function getAllInKinds()
+    {
         $locale = app()->getLocale();
         $admin = auth('admin')->user();
         if (!$admin) {
@@ -329,30 +331,31 @@ class InKindController extends Controller
                 'message' => 'Unauthorized - Admin access only',
             ], 401);
         }
+
         $addressField = "address_{$locale}";
 
         $query = InKind::query();
 
-        $query->whereHas('campaign.categories', function ($q) {
+        $query->whereHas('campaign.category', function ($q) {
             $q->where('main_category', 'InKind');
         });
 
-        $query->whereHas('campaign', function($q) {
+        $query->whereHas('campaign', function ($q) {
             $q->where('status', CampaignStatus::Pending->value);
         });
 
-        $inKinds = $query->with('campaign.categories')->get()->map(function ($inKind) use ($addressField, $locale) {
+        $inKinds = $query->with('campaign.category')->get()->map(function ($inKind) use ($addressField, $locale) {
             return [
                 'id' => $inKind->id,
                 'address' => $inKind->{$addressField} ?? null,
-                'phone' => $inKind->phone ?? null,  // إضافة رقم الهاتف لو موجود
-                'created_at' => $inKind->created_at->toDateTimeString(),
-                'categories' => $inKind->campaign->categories->map(function ($cat) use ($locale) {
-                    return [
-                        'id' => $cat->id,
-                        'name' => $locale === 'ar' ? $cat->name_ar : $cat->name_en,
-                    ];
-                })->values(),
+                'phone' => $inKind->phone ?? null,
+                'created_at' => $inKind->created_at,
+                'category' => [
+                    'id' => $inKind->campaign->category->id,
+                    'name' => $locale === 'ar'
+                        ? $inKind->campaign->category->name_category_ar
+                        : $inKind->campaign->category->name_category_en,
+                ],
             ];
         });
 
@@ -361,6 +364,7 @@ class InKindController extends Controller
             'data' => $inKinds,
         ]);
     }
+
 
     public function getInKindsByCategory($categoryId) {
         $locale = app()->getLocale();

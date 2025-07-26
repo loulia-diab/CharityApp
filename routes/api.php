@@ -119,21 +119,14 @@ Route::prefix('campaigns')->group(function () {
     Route::get('/filter/byDate', [CampaignFilterController::class, 'filterCampaignsByDate']);
     Route::get('/filter/byGoalAmount', [CampaignFilterController::class, 'filterCampaignsByGoalAmount']);
     Route::get('/filter/byBeneficiariesCount', [CampaignFilterController::class, 'filterCampaignsByBeneficiariesCount']);
-
     //campaign with beneficiary
-    // اضافة مستفيد او اكتر لحملة معينة
     Route::post('/{campaignId}/addBeneficiaries', [CampaignBeneficiaryController::class, 'addBeneficiariesToCampaign']);
-    //  جلب مستفيدي الحملة المعينة
     Route::get('/{campaignId}/getBeneficiaries', [CampaignBeneficiaryController::class, 'getCampaignBeneficiaries']);
-    // حذف مستفيدين من حملة معينة
-    Route::delete('/{campaignId}/deleteBeneficiaries/{beneficiaryId}', [CampaignBeneficiaryController::class, 'removeBeneficiaryFromCampaign']);
+    Route::delete('/{campaignId}/deleteBeneficiaries', [CampaignBeneficiaryController::class, 'removeBeneficiariesFromCampaign']);
     //campaign with volunteer
-    // اضافة مطوعين لحملة
     Route::post('/{campaignId}/addVolunteers', [CampaignVolunteerController::class, 'addVolunteersToCampaign']);
-    // جلب كل المتطوعين لحملة
     Route::get('/{campaignId}/getVolunteers', [CampaignVolunteerController::class, 'getCampaignVolunteers']);
-    // حذف متطوعين من حملة
-    Route::delete('/{campaignId}/deleteVolunteers/{volunteerId}', [CampaignVolunteerController::class, 'removeVolunteerFromCampaign']);
+    Route::delete('/{campaignId}/deleteVolunteers', [CampaignVolunteerController::class, 'removeVolunteersFromCampaign']);
 });
 Route::prefix('humanCase')->group(function () {
         // Admin
@@ -150,7 +143,6 @@ Route::prefix('humanCase')->group(function () {
         Route::get('/category/{categoryId}/byStatus/{status}', [HumanCaseController::class, 'getHumanCasesByStatus']);
         Route::get('byCreationDate', [HumanCaseController::class, 'getHumanCasesByCreationDate']);
     });
-
 Route::prefix('sponsorship')->group(function () {
         // Admin
     Route::post('/add', [SponsorshipController::class, 'addSponsorship']);
@@ -166,16 +158,10 @@ Route::prefix('sponsorship')->group(function () {
 
     });
 Route::prefix('inKinds')->group(function () {
-    // اضافة طلب تبرع عيني
     Route::post('/add/for/user', [InKindController::class, 'addInKind']);
-    // تبرعاتي العينية
     Route::get('/getAll/for/user', [InKindController::class, 'getAllUserInKinds']);
     // يشوف الادمن حالات التبرع العيني
     Route::get('/getAll/for/admin', [InKindController::class, 'getAllInKinds']);
-    // يشوف الادمن التبرعات العينية حسب الكاتيغوريات كلها
-   // Route::get('/category/{categoryId}', [InKindController::class, 'getInKindsByCategory']);
-    // يشوف الادمن طلب التبرع لوحده
-    Route::get('/get/{inKindId}/for/admin', [InKindController::class, 'getInKindDetails']);
     // قبول التبرع العيني وتسجيله ك ترانزاكشن
     Route::post('/accept/for/admin', [InKindController::class, 'acceptInKind']);
     // اضافة المستفيدين للتبرع العيني
@@ -186,17 +172,14 @@ Route::prefix('inKinds')->group(function () {
 });
 
 // استفاداتي
-Route::get('/beneficiary/{beneficiaryId}/campaigns', [BeneficiaryController::class, 'getBeneficiaryCampaigns']);
-
+Route::get('/beneficiary/getAll', [BeneficiaryController::class, 'getBeneficiaryActivities']);
 // تطوعاتي
-Route::get('/volunteer/{volunteerId}/campaigns', [VolunteerController::class, 'getVolunteerCampaigns']);
+Route::get('/volunteer/getAll', [VolunteerController::class, 'getVolunteerCampaigns']);
 // الدوري (كفالة)
 Route::prefix('plans')->group(function () {
     Route::post('/create/forSponsorship/{sponsorshipId}', [PlanController::class,'createAndActivatePlanForSponsorship']);
-  //  Route::post('/activate/{planId}', [PlanController::class, 'activatePlan']);
     Route::post('/deactivate/{planId}', [PlanController::class, 'deactivatePlan']);
     Route::post('/reactivate/{planId}', [PlanController::class, 'reactivatePlan']);
-
     // كفالاتي
     Route::get('/getAll/for/user', [PlanController::class, 'getSponsorshipPlansForUser']);
     // خطط الكفالة للأدمن :الكفلاء المتبرعين
@@ -205,9 +188,9 @@ Route::prefix('plans')->group(function () {
     Route::post('/active/recurring', [PlanController::class, 'activateRecurring']);
     Route::post('/deactive/recurring/{planId}', [PlanController::class, 'deactivateRecurring']);
     Route::post('/reactive/recurring/{planId}', [PlanController::class, 'reactivateRecurring']);
-// تبرعي الدوري
+    // تبرعي الدوري
     Route::get('/getAll/recurring/for/user', [PlanController::class, 'getRecurringPlan']);
- // جلب خطط التبرع للمستخدمين
+    // جلب خطط التبرع للمستخدمين
     Route::get('/getAll/recurring/for/admin', [PlanController::class, 'getRecurringPlansDonors']);
 });
 

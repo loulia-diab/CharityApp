@@ -175,29 +175,5 @@ class UserController extends Controller
         ]);
     }
 
-    public function getMyGiftDonations(Request $request)
-    {
-        $user = auth('api')->user();
-
-        if (!$user) {
-            return response()->json(['message' => 'غير مصرح'], 401);
-        }
-
-        $gifts = Gift::with('transaction')
-            ->where('user_id', $user->id)
-            ->latest()
-            ->get()
-            ->map(function ($gift) {
-                return [
-                    'recipient_name' => $gift->recipient_name,
-                    'amount'         => $gift->transaction->amount ?? 0,
-                    'donated_at'     => $gift->transaction->created_at ? $gift->transaction->created_at->toDateTimeString() : null,
-                ];
-            });
-
-        return response()->json([
-            'gifts' => $gifts
-        ]);
-    }
 
 }

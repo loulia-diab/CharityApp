@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('messages', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained('users')->CascadeOnDelete();
+            $table->string('phone');
+            $table->text('message');
+            $table->boolean('is_read_by_admin')->default(false);
             $table->timestamps();
         });
     }

@@ -177,6 +177,10 @@ class PlanController extends Controller
 
         // تحقق من وجود الكفالة
         $sponsorship = Sponsorship::findOrFail($sponsorshipId);
+        if(!$sponsorship)
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الكفالة غير موجودة.' : 'Sponsorship is not existed.'
+            ],500);
 
         // تحقق من صحة المبلغ
         $request->validate([
@@ -503,13 +507,13 @@ class PlanController extends Controller
         DB::beginTransaction();
 
         try {
-            $generalBox = Box::where('name_en', 'General Donation')->first();
+            $periodicBox = Box::where('name_en', 'Periodic donation')->first();
 
-            if (!$generalBox) {
+            if (!$periodicBox) {
                 return response()->json([
                     'message' => $locale === 'ar'
                         ? 'صندوق التبرعات العامة غير موجود.'
-                        : 'General donation box not found.'
+                        : 'Periodic donation box not found.'
                 ], 500);
             }
 
@@ -551,8 +555,8 @@ class PlanController extends Controller
             $user->save();
 
             // زيادة رصيد الصندوق
-            $generalBox->balance += $request->amount;
-            $generalBox->save();
+            $periodicBox->balance += $request->amount;
+            $periodicBox->save();
 
             // إنشاء المعاملة
             Transaction::create([
@@ -560,7 +564,7 @@ class PlanController extends Controller
                 'type' => 'donation',
                 'direction' => 'in',
                 'amount' => $request->amount,
-                'box_id' => $generalBox->id,
+                'box_id' => $periodicBox->id,
             ]);
 
             DB::commit();
@@ -569,14 +573,14 @@ class PlanController extends Controller
 
             $transaction = Transaction::where('user_id', $user->id)
                 ->where('type', 'donation')
-                ->where('box_id', $generalBox->id)
+                ->where('box_id', $periodicBox->id)
                 ->latest()
                 ->first();
 
             return response()->json([
                 'message' => $locale === 'ar'
                     ? 'تم تفعيل خطة التبرع العام بنجاح'
-                    : 'General donation plan activated successfully',
+                    : 'Periodic donation plan activated successfully',
                 'data' => [
                     'id' => $plan->id,
                     'amount' => $plan->amount,
@@ -623,7 +627,7 @@ class PlanController extends Controller
         $plan->save();
 
         return response()->json([
-            'message' => $locale === 'ar' ? 'تم إيقاف خطة التبرع العام' : 'General donation plan deactivated',
+            'message' => $locale === 'ar' ? 'تم إيقاف خطة التبرع العام' : 'Periodic donation plan deactivated',
             'data' => [
                 'id' => $plan->id,
                 'end_date' => $plan->end_date->format('Y-m-d'),
@@ -673,7 +677,7 @@ class PlanController extends Controller
         $plan->save();
 
         return response()->json([
-            'message' => $locale === 'ar' ? 'تم إعادة تفعيل خطة التبرع العام' : 'General donation plan reactivated',
+            'message' => $locale === 'ar' ? 'تم إعادة تفعيل خطة التبرع العام' : 'Periodic donation plan reactivated',
             'data' => [
                 'id' => $plan->id,
                 'amount' => $plan->amount,
@@ -738,7 +742,7 @@ class PlanController extends Controller
             ->get();
 
         return response()->json([
-            'message' => $locale === 'ar' ? 'تم جلب خطط التبرع الدوري العامة' : 'Recurring general donation plans retrieved',
+            'message' => $locale === 'ar' ? 'تم جلب خطط التبرع الدوري ' : 'Recurring Periodic donation plans retrieved',
             'data' => $plans->map(function ($plan) {
                 return [
                     'id' => $plan->id,

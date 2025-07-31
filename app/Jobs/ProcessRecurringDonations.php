@@ -20,7 +20,7 @@ class ProcessRecurringDonations implements ShouldQueue
     {
         $now = Carbon::now();
 
-        // جلب الخطط المفعلة التي انتهت مواعيدها أو اليوم (لتفادي التأخير)
+
         $plans = Plan::where('is_activated', true)
             ->whereDate('end_date', '<=', $now->startOfDay())
             ->with('user', 'sponsorship.campaign')
@@ -61,7 +61,7 @@ class ProcessRecurringDonations implements ShouldQueue
                 if ($isSponsorship) {
                     $transactionData['campaign_id'] = $campaign->id ?? null;
                 } else {
-                    $generalDonationBoxId = 8;
+                    $generalDonationBoxId = 8; // تحتاج تعديل
                     $transactionData['box_id'] = $generalDonationBoxId;
                 }
 

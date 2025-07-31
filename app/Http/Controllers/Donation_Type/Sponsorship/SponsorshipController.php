@@ -698,6 +698,7 @@ class SponsorshipController extends Controller
                     'description' => $locale === 'ar' ? $campaign?->description_ar : $campaign?->description_en,
                     'goal_amount' => $campaign?->goal_amount,
                     'collected_amount' => $campaign?->collected_amount,
+                    'remaining_amount' => max(0, $campaign?->goal_amount - $campaign?->collected_amount),
                     'status' => $campaign?->status,
                     'image' => $campaign?->image ?? null,
                     'created_at' => $campaign?->created_at,

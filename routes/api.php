@@ -16,7 +16,9 @@ use App\Http\Controllers\Donation_Type\InKind\InKindBeneficiaryController;
 use App\Http\Controllers\Donation_Type\InKind\InKindController;
 use App\Http\Controllers\Donation_Type\Sponsorship\PlanController;
 use App\Http\Controllers\Donation_Type\Sponsorship\SponsorshipController;
+use App\Http\Controllers\GiftController;
 use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\user\GoogleController;
 use App\Http\Controllers\user\UserAuthController;
@@ -47,7 +49,6 @@ Route::prefix('user')->group(function () {
         Route::post('/changePassword', [UserController::class, 'changePassword']);
         Route::get('/getAll', [UserController::class, 'getAllUsers']);
         Route::get('/getMyRecharges', [UserController::class, 'getMyRecharges']);
-        Route::get('/getMyGiftDonations', [UserController::class, 'getMyGiftDonations']);
     });
 });
 
@@ -90,12 +91,18 @@ Route::prefix('beneficiary_request')->group(function () {
   //  Route::get('/getBeneficiariesByPriority', [BeneficiaryRequestController::class, 'getBeneficiariesByPriority']);
   //  Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
 });
+Route::prefix('gift')->group(function () {
+    Route::post('donateAsGift', [GiftController::class, 'donateAsGift']);
+    Route::get('getMyGiftDonations', [GiftController::class, 'getMyGiftDonations']);
+});
 Route::prefix('transaction')->group(function () {
     Route::post('recharge', [TransactionController::class, 'rechargeUserBalance']);
-    Route::post('donateAsGift', [TransactionController::class, 'donateAsGift']);
     Route::post('donateOnceTime', [TransactionController::class, 'donate']);
 });
-
+Route::prefix('message')->group(function () {
+    Route::post('send', [MessageController::class, 'sendMessage']);
+    Route::get('getFilterByRead', [MessageController::class, 'getMessagesFilterByRead']);
+});
 Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);
     Route::get('/getAll',[CategoryController::class,'getAllCategories']);

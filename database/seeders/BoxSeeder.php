@@ -155,5 +155,15 @@ class BoxSeeder extends Seeder
             'price' => null,
         ]);
 
+        Box::create([
+            'box_id' => null,
+            'name_ar' => 'التبرع الدوري',
+            'name_en' => 'Periodic donation',
+            'description_ar' => null,
+            'description_en' => null,
+            'image' => null,
+            'price' => null,
+        ]);
+
     }
 }

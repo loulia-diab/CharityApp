@@ -177,7 +177,7 @@ class VolunteerRequestController extends Controller
             'id' => $requestData->id,
             'user_id' => $requestData->user_id,
             'admin_id' => $requestData->admin_id,
-            'full_name' => $requestData->{'full_name_' . $locale} ?? $requestData->{'full_name_' . $fallback},
+            'name' => $requestData->{'full_name_' . $locale} ?? $requestData->{'full_name_' . $fallback},
             'gender' => $requestData->{'gender_' . $locale} ?? $requestData->{'gender_' . $fallback},
             'birth_date' => $requestData->birth_date,
             'address' => $requestData->{'address_' . $locale} ?? $requestData->{'address_' . $fallback},

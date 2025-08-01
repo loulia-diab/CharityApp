@@ -46,13 +46,9 @@ class Transaction extends Model
     {
         static::created(function ($transaction) {
             $pdf = Pdf::loadView('pdf.transaction_receipt', ['transaction' => $transaction]);
-
             $fileName = 'receipts/transaction_' . $transaction->id . '.pdf';
-
             Storage::disk('public')->put($fileName, $pdf->output());
-
             $transaction->update(['pdf_url' => $fileName]);
         });
     }
-
 }

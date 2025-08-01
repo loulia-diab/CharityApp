@@ -61,7 +61,7 @@ class ProcessRecurringDonations implements ShouldQueue
                 if ($isSponsorship) {
                     $transactionData['campaign_id'] = $campaign->id ?? null;
                 } else {
-                    $generalDonationBoxId = 8; // تحتاج تعديل
+                    $generalDonationBoxId = 14; // تحتاج تعديل
                     $transactionData['box_id'] = $generalDonationBoxId;
                 }
 

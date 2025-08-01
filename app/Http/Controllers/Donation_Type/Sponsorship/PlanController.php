@@ -49,7 +49,6 @@ class PlanController extends Controller
         ], 201);
     }
 
-
     // تفعيل خطة الكفالة
     public function activatePlan(Request $request, $planId)
     {
@@ -737,7 +736,7 @@ class PlanController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
         $plans = Plan::whereNull('sponsorship_id') // فقط التبرع العام
-        ->with('user:id,name,email') // جلب معلومات اليوزر
+        ->with('user:id,name,email,phone') // جلب معلومات اليوزر
         ->latest('created_at')
             ->get();
 

@@ -1,0 +1,93 @@
+.sidebar {
+  flex: 1;
+  min-height: 100vh; // تغيير من height ثابتة إلى min-height
+  background: var(--Gradiant, linear-gradient(180deg, #155E5D 0%, #2CC4C2 100%));
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; // إخفاء أي محتوى يخرج عن الإطار
+
+  .top {
+    display: flex;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; // منع انكماش الجزء العلوي
+    
+    .logo {
+      font-size: 20px;
+      color: #ffffff;
+      font-weight: bold; // إضافة وزن للخط
+    }
+  }
+
+  .bottom {
+    flex: 1; // لجعل هذا الجزء يشغل المساحة المتبقية
+    padding-left: 10px;
+    overflow-y: auto; // تمكين التمرير العمودي عند الحاجة
+    padding-bottom: 20px; // مسافة إضافية في الأسفل
+
+    // تخصيص شريط التمرير
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(210, 180, 140, 0.6);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(210, 180, 140, 0.8);
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      
+      .title {
+        font-size: 14px;
+        font-weight: bold;
+        color: #ffffff;
+        margin-top: 15px;
+        margin-bottom: 5px;
+        padding-left: 5px; // محاذاة أفضل
+      }
+
+      li {
+        display: flex;
+        align-items: center;
+        padding: 8px 5px; // زيادة padding للأفضل
+        color: #ffffff;
+        cursor: pointer;
+        transition: background-color 0.3s; // إضافة transition لنعومة الحركة
+
+        &:hover {
+          background-color: rgba(21, 94, 93, 0.7);
+        }
+
+        .icon {
+          font-size: 20px;
+          color: #D2B48C;
+          transition: transform 0.2s; // إضافة تأثير عند hover
+        }
+
+        span {
+          font-size: 13px;
+          font-weight: 600;
+          margin-left: 10px;
+        }
+
+        &:hover .icon {
+          transform: scale(1.1); // تكبير الأيقونة عند hover
+        }
+      }
+    }
+  }
+}

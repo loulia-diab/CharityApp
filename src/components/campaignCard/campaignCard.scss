@@ -1,0 +1,19 @@
+
+.fundsCampaigns{
+    display: flex;
+    width: 100%;
+    background-color: white;
+    color: #616161;
+    width: 100%;
+    background-color: #F4F0EC; // لون الخلفية الثابت خلف الصورة
+    background-image: url('../5.png');
+    background-repeat: no-repeat;
+    background-size: contain; // أو cover حسب حاجتك
+    background-position: center; // لتوسيط الصورة
+    color: #616161;
+    min-height: 100vh;
+
+    .fundsCampaignsContainer{
+              flex: 5;
+    }
+}

@@ -2,7 +2,6 @@
 
 namespace App\Console;
 
-use App\Jobs\ProcessMonthlySponsorships;
 use App\Jobs\ProcessRecurringDonations;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;

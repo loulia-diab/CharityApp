@@ -68,15 +68,15 @@ class ProcessRecurringDonations implements ShouldQueue
                 $transaction = Transaction::create($transactionData);
 
                 // تحديث تاريخ بداية ونهاية الخطة
-                $nextDate = match ($plan->recurrence) {
-                    'daily' => $now->copy()->addDay(),
-                    'weekly' => $now->copy()->addWeek(),
-                    'monthly' => $now->copy()->addMonth(),
-                    default => $now->copy()->addMonth(),
+                $plan->start_date = $plan->end_date->copy()->addDay();
+
+                $plan->end_date = match ($plan->recurrence) {
+                    'daily' => $plan->start_date->copy()->addDay(),
+                    'weekly' => $plan->start_date->copy()->addWeek(),
+                    'monthly' => $plan->start_date->copy()->addMonth(),
+                    default => $plan->start_date->copy()->addMonth(),
                 };
 
-                $plan->start_date ??= $now;
-                $plan->end_date = $nextDate;
                 $plan->save();
 
                 // إذا هي كفالة، نحدث المبلغ المجمّع والحالة

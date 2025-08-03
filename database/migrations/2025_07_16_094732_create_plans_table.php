@@ -20,7 +20,6 @@ return new class extends Migration
             $table->date('start_date');
             $table->date('end_date');
             $table->string('recurrence')->default('monthly');
-            $table->date('last_donation_at')->nullable();
             $table->timestamps();
         });
     }

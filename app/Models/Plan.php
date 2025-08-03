@@ -15,7 +15,9 @@ class Plan extends Model
         'is_activated',
         'start_date',
         'end_date',
-        'recurrence'
+        'recurrence',
+
+
     ];
     protected $casts = [
         'recurrence' => RecurrenceType::class,
@@ -46,6 +48,11 @@ class Plan extends Model
     public function getUpdatedAtAttribute($value)
     {
         return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
+    }
+
+    public function getLastDonationAtAttribute($value)
+    {
+        return $value ? Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString() : null;
     }
 
 }

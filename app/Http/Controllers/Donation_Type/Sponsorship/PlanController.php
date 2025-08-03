@@ -431,11 +431,16 @@ class PlanController extends Controller
                 'recurrence' => $plan->recurrence,
                 'start_date' => $plan->start_date ? Carbon::parse($plan->start_date)->format('Y-m-d') : null,
                 'end_date' => $plan->end_date ? Carbon::parse($plan->end_date)->format('Y-m-d') : null,
+                'status' => $locale === 'ar'
+                    ? ($plan->is_activated ? 'نشطة' : 'ملغاة')
+                    : ($plan->is_activated ? 'active' : 'cancelled'),
+                'is_activated'=>$plan->is_activated,
                 'sponsorship' => [
                     'id' => $plan->sponsorship->id,
                     'title' => $locale === 'ar'
                         ? $plan->sponsorship->campaign->title_ar
                         : $plan->sponsorship->campaign->title_en,
+                    'image'=>$plan->sponsorship->campaign->image ?? null,
                 ],
                 'transactions' => $transactions->map(function ($t) {
                     return [
@@ -601,7 +606,6 @@ class PlanController extends Controller
         }
     }
 
-
     // الغاء تفعيل
     public function deactivateRecurring($planId)
     {
@@ -703,28 +707,69 @@ class PlanController extends Controller
 
         if ($plans->isEmpty()) {
             return response()->json([
-                'message' => $locale === 'ar' ? 'لا يوجد خطة تبرع دوري حالياً' : 'No recurring donation plans found',
+                'message' => $locale === 'ar'
+                    ? 'لا يوجد خطة تبرع دوري حالياً'
+                    : 'No recurring donation plans found',
             ]);
         }
 
-        return response()->json([
-            'message' => $locale === 'ar' ? 'تم جلب خطط التبرع الدوري' : 'Recurring donation plans retrieved',
-            'data' => $plans->map(function ($plan) use ($locale) {
-                // حساب recurrence_label لكل خطة فردياً
-                $recurrenceLabel = $plan->recurrence->label($locale);
+        $data = $plans->map(function ($plan) use ($locale, $user) {
+            // تحديد الفترة لجلب المعاملات المرتبطة بالخطة
+            $transactions = collect();
 
-                return [
-                    'id' => $plan->id,
-                    'amount' => $plan->amount,
-                    'recurrence' => $plan->recurrence,
-                    'recurrence_label' => $recurrenceLabel,
-                    'is_activated' => $plan->is_activated,
-                    'start_date' => $plan->start_date,
-                    'end_date' => $plan->end_date,
-                ];
-            }),
+            if ($plan->start_date && $plan->end_date) {
+                $transactions = Transaction::where('user_id', $user->id)
+                    ->whereNull('campaign_id') // لأن التبرع عام
+                    ->whereBetween('created_at', [
+                        Carbon::parse($plan->start_date),
+                        Carbon::parse($plan->end_date)
+                    ])
+                    ->where('amount', $plan->amount)
+                    ->orderByDesc('created_at')
+                    ->get([
+                        'id',
+                        'amount',
+                        'type',
+                        'direction',
+                        'pdf_url',
+                        'created_at'
+                    ]);
+            }
+
+            $recurrenceLabel = $plan->recurrence->label($locale);
+
+            return [
+                'id' => $plan->id,
+                'amount' => $plan->amount,
+                'recurrence' => $plan->recurrence,
+                'recurrence_label' => $recurrenceLabel,
+                'status' => $locale === 'ar'
+                    ? ($plan->is_activated ? 'نشطة' : 'ملغاة')
+                    : ($plan->is_activated ? 'active' : 'cancelled'),
+                'is_activated'=>$plan->is_activated,
+                'start_date' => $plan->start_date ? Carbon::parse($plan->start_date)->format('Y-m-d') : null,
+                'end_date' => $plan->end_date ? Carbon::parse($plan->end_date)->format('Y-m-d') : null,
+                'transactions' => $transactions->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'amount' => $t->amount,
+                        'type' => $t->type,
+                        'direction' => $t->direction,
+                        'pdf_url' => $t->pdf_url ?? null,
+                        'date' => $t->created_at->format('Y-m-d'),
+                    ];
+                }),
+            ];
+        });
+
+        return response()->json([
+            'message' => $locale === 'ar'
+                ? 'تم جلب خطط التبرع الدوري'
+                : 'Recurring donation plans retrieved',
+            'data' => $data
         ]);
     }
+
 
 
     // جلب خطط التبرع الدوري للأدمن

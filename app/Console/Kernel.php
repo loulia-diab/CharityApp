@@ -10,10 +10,8 @@ class Kernel extends ConsoleKernel
 {
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->job(new ProcessRecurringDonations)
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->onOneServer();
+        $schedule->job(new ProcessRecurringDonations)->everyMinute();
+
     }
 
 

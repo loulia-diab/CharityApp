@@ -38,8 +38,6 @@ Route::prefix('user')->group(function () {
     Route::post('/register', [UserAuthController::class, 'register']);
     Route::post('/login', [UserAuthController::class, 'login']);
     Route::post('/resetPassword', [UserAuthController::class, 'resetPassword']);
-  //  Route::get('/googleLogin', [GoogleController::class, 'googleLogin']);
-  //  Route::get('/google_callback', [GoogleController::class, 'handleGoogleCallback'])->middleware('checkLanguage');
     Route::post('/google', [GoogleController::class, 'loginWithGoogle']);
 
     Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {

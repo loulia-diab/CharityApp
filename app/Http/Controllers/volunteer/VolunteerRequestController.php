@@ -143,7 +143,7 @@ class VolunteerRequestController extends Controller
             ->map(function ($request) use ($locale, $fallback) {
                 return [
                     'id' => $request->id,
-                    'full_name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
+                    'name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
                     'status' => $request->{'status_' . $locale} ?? $request->{'status_' . $fallback},
                     'created_at' => $request->created_at->toDateTimeString(),
                 ];

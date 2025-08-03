@@ -20,7 +20,7 @@ class ProcessRecurringDonations implements ShouldQueue
     {
         $now = Carbon::now();
 
-        // جلب الخطط المفعلة التي انتهت مواعيدها أو اليوم (لتفادي التأخير)
+
         $plans = Plan::where('is_activated', true)
             ->whereDate('end_date', '<=', $now->startOfDay())
             ->with('user', 'sponsorship.campaign')
@@ -61,22 +61,22 @@ class ProcessRecurringDonations implements ShouldQueue
                 if ($isSponsorship) {
                     $transactionData['campaign_id'] = $campaign->id ?? null;
                 } else {
-                    $generalDonationBoxId = 8;
+                    $generalDonationBoxId = 14; // تحتاج تعديل
                     $transactionData['box_id'] = $generalDonationBoxId;
                 }
 
                 $transaction = Transaction::create($transactionData);
 
                 // تحديث تاريخ بداية ونهاية الخطة
-                $nextDate = match ($plan->recurrence) {
-                    'daily' => $now->copy()->addDay(),
-                    'weekly' => $now->copy()->addWeek(),
-                    'monthly' => $now->copy()->addMonth(),
-                    default => $now->copy()->addMonth(),
+                $plan->start_date = $plan->end_date->copy()->addDay();
+
+                $plan->end_date = match ($plan->recurrence) {
+                    'daily' => $plan->start_date->copy()->addDay(),
+                    'weekly' => $plan->start_date->copy()->addWeek(),
+                    'monthly' => $plan->start_date->copy()->addMonth(),
+                    default => $plan->start_date->copy()->addMonth(),
                 };
 
-                $plan->start_date ??= $now;
-                $plan->end_date = $nextDate;
                 $plan->save();
 
                 // إذا هي كفالة، نحدث المبلغ المجمّع والحالة

@@ -82,7 +82,7 @@
 </head>
 <body>
 
-<h3>جمعية كن عوناً</h3>
+<h3>Kun Aunan</h3>
 <h1> Transaction Receipt </h1>
 
 <table>
@@ -140,19 +140,17 @@
     @if($transaction->box)
         <tr>
             <th>Box</th>
-            <td>{{ $transaction->box->name }}</td>
+            <td>{{ $transaction->box->name_en }}</td>
         </tr>
     @endif
 </table>
 
 <div class="signature">
-    Organization Signature
+    Organization Signature : Kun Aunan
     <div class="line"></div>
 </div>
-<div class="signature" style="margin-top: 60px; text-align: {{ $locale === 'ar' ? 'right' : 'left' }}; font-family: cursive; font-size: 24px; color: #000;">
-    {{  'كن عوناً'  }}
-    <div style="border-top: 1px solid #000; width: 200px; margin-top: 5px;"></div>
-</div>
+
+
 
 <footer>
     'Thank you for using our donation system.'

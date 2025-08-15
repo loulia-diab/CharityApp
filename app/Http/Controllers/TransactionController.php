@@ -145,4 +145,41 @@ class TransactionController extends Controller
         }
     }
 
+    public function getCampaignDonors($campaign_id)
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        // التحقق من وجود الحملة
+        if (!Campaign::where('id', $campaign_id)->exists()) {
+            return response()->json([
+                'message' => 'الحملة غير موجودة'
+            ], 404);
+        }
+
+
+        $donations = Transaction::where('campaign_id', $campaign_id)
+            ->where('type', 'donation')
+            ->where('direction', 'in')
+            ->with('user:id,name,email,phone') // جلب بيانات المستخدم فقط المطلوبة
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($transaction) {
+                return [
+                    'id'         => $transaction->user->id ?? null,
+                    'name'       => $transaction->user->name ?? null,
+                    'contact'    => $transaction->user->email ?? $transaction->user->phone,
+                    'amount'     => $transaction->amount,
+                    'donated_at' => $transaction->created_at->toDateTimeString() ,
+                ];
+            });
+
+        return response()->json([
+            'donors'      => $donations,
+        ]);
+    }
+
 }

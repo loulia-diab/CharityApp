@@ -79,5 +79,8 @@ class User extends Authenticatable
     public function inKinds() {
         return $this->hasMany(InKind::class);
     }
+// User.php
+    public function notifications() { return $this->hasMany(Notification::class); }
+    public function devices() { return $this->hasMany(UserDevice::class); }
 
 }

@@ -16,13 +16,12 @@ class Plan extends Model
         'start_date',
         'end_date',
         'recurrence',
-
-
     ];
     protected $casts = [
         'recurrence' => RecurrenceType::class,
         'is_activated' => 'boolean',
     ];
+
     protected $appends = ['recurrence_label'];
 
     public function getRecurrenceLabelAttribute()

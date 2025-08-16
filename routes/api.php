@@ -185,6 +185,8 @@ Route::get('/beneficiary/getAll', [BeneficiaryController::class, 'getBeneficiary
 Route::get('/volunteer/getAll', [VolunteerController::class, 'getVolunteerCampaigns']);
 // الدوري (كفالة)
 Route::prefix('plans')->group(function () {
+    Route::get('/{planId}/check-dates', [PlanController::class, 'checkPlanDates']);
+
     Route::post('/create/forSponsorship/{sponsorshipId}', [PlanController::class,'createAndActivatePlanForSponsorship']);
     Route::post('/deactivate/{planId}', [PlanController::class, 'deactivatePlan']);
     Route::post('/reactivate/{planId}', [PlanController::class, 'reactivatePlan']);

@@ -8,6 +8,36 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    public function getAllCategoriesForAdmin($main_category)
+    {
+        $locale = app()->getLocale();
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $allowedMainCategories =
+            [
+                'Campaign', 'HumanCase', 'Sponsorship','InKind'
+            ];
+
+        if (!in_array($main_category, $allowedMainCategories)) {
+            return response()->json([
+                'message' => 'Invalid main category',
+            ], 422);
+        }
+        $categories = Category::select(
+            'id',
+            "name_category_{$locale} as name",
+            'main_category'
+        )
+            ->where('main_category', $main_category)
+            ->get();
+
+        return response()->json([
+            'message' => 'Categories retrieved successfully',
+            'data' => $categories
+        ]);
+    }
     public function getAllCategories()
     {
         $locale = app()->getLocale(); // 'ar' أو 'en'

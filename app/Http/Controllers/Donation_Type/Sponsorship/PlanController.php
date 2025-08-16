@@ -259,7 +259,20 @@ class PlanController extends Controller
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إنشاء وتفعيل خطة الكفالة بنجاح' : 'Sponsorship plan created and activated successfully',
                 'data' => [
-                    'plan' => $plan,
+                    'plan' => [
+                        'id' => $plan->id,
+                        'user_id' => $plan->user_id,
+                        'sponsorship_id' => $plan->sponsorship_id,
+                        'amount' => $plan->amount,
+                        'recurrence' => $plan->recurrence,
+                        'is_activated' => $plan->is_activated,
+                        'start_date' => $plan->start_date->format('Y-m-d H:i:s'),
+                        'end_date' => $plan->end_date->format('Y-m-d H:i:s'),
+                        'created_at' => $plan->created_at,
+                        'updated_at' => $plan->updated_at,
+                        'recurrence_label' => $plan->recurrence_label,
+                    ],
+
                     'campaign' => [
                         'goal_amount' => (float) $campaign->goal_amount,
                         'collected_amount' => (float) $campaign->collected_amount,
@@ -272,7 +285,7 @@ class PlanController extends Controller
                         'type' => $transaction->type,
                         'direction' => $transaction->direction,
                         'pdf_url' => $transaction->pdf_url ?? null,
-                        'created_at' => $transaction->created_at,
+                        'created_at' => $transaction->created_at->format('Y-m-d H:i:s'),
                     ],
                 ],
             ], 201);
@@ -470,12 +483,16 @@ class PlanController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
         $plans = Plan::whereNotNull('sponsorship_id')
-            ->with(['user:id,name,email', 'sponsorship:id'])
+            ->with(['user:id,name,email,phone', 'sponsorship.campaign'])
             ->latest('created_at')
             ->get();
 
         $data = $plans->map(function ($plan) use ($locale) {
             return [
+                'sponsorship' => [
+                    'id' => $plan->sponsorship->id,
+                     'title' => $locale === 'ar' ? $plan->sponsorship->campaign->title_ar : $plan->sponsorship->campaign->title_en,
+                ],
                 'id' => $plan->id,
                 'amount' => $plan->amount,
                 'recurrence' => $plan->recurrence,
@@ -483,10 +500,7 @@ class PlanController extends Controller
                 'start_date' => $plan->start_date ? Carbon::parse($plan->start_date)->format('Y-m-d') : null,
                 'end_date' => $plan->end_date ? Carbon::parse($plan->end_date)->format('Y-m-d') : null,
                 'user' => $plan->user,
-                'sponsorship' => [
-                    'id' => $plan->sponsorship->id,
-                   // 'title' => $locale === 'ar' ? $plan->sponsorship->title_ar : $plan->sponsorship->title_en,
-                ]
+
             ];
         });
 
@@ -702,7 +716,6 @@ class PlanController extends Controller
 
         $plans = Plan::where('user_id', $user->id)
             ->whereNull('sponsorship_id') // فقط التبرع العام
-            ->latest('created_at')
             ->get();
 
         if ($plans->isEmpty()) {
@@ -747,8 +760,12 @@ class PlanController extends Controller
                     ? ($plan->is_activated ? 'نشطة' : 'ملغاة')
                     : ($plan->is_activated ? 'active' : 'cancelled'),
                 'is_activated'=>$plan->is_activated,
-                'start_date' => $plan->start_date ? Carbon::parse($plan->start_date)->format('Y-m-d') : null,
-                'end_date' => $plan->end_date ? Carbon::parse($plan->end_date)->format('Y-m-d') : null,
+                'start_date' => $plan->start_date ,
+            // ? Carbon::parse($plan->start_date),
+                //->format('Y-m-d') : null,
+                'end_date' => $plan->end_date ,
+                    //? Carbon::parse($plan->end_date),
+                //->format('Y-m-d') : null,
                 'transactions' => $transactions->map(function ($t) {
                     return [
                         'id' => $t->id,
@@ -798,6 +815,25 @@ class PlanController extends Controller
                     'end_date' => $plan->end_date,
                 ];
             })
+        ]);
+    }
+    public function checkPlanDates($planId)
+    {
+        $plan = \App\Models\Plan::find($planId);
+
+        if (!$plan) {
+            return response()->json([
+                'message' => 'Plan not found',
+            ], 404);
+        }
+
+        $now = now()->format('Y-m-d H:i:s');
+        $endDate = $plan->end_date->format('Y-m-d H:i:s');
+
+        return response()->json([
+            'now' => $now,
+            'end_date' => $endDate,
+            'is_now_gte_end_date' => now()->gte($plan->end_date),
         ]);
     }
 

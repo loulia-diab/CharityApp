@@ -314,14 +314,16 @@ class VolunteerRequestController extends Controller
 
         // في حال القبول، أضف المتطوع
         if ($validated['status'] === 'accepted') {
-            Volunteer::firstOrCreate([
+            $Volunteer = Volunteer::firstOrCreate([
                 'volunteer_request_id' => $volunteerRequest->id,
             ], [
                 'user_id' => $volunteerRequest->user_id,
             ]);
         }
 
-        return response()->json(['message' => 'Status updated successfully']);
+        return response()->json(['message' => 'Status updated successfully',
+            'Volunteer_id'=> $Volunteer->id
+            ]);
     }
 
 }

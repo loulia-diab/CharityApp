@@ -304,7 +304,7 @@ class BeneficiaryRequestController extends Controller
             $existing = Beneficiary::where('beneficiary_request_id', $requestData->id)->first();
 
             if (!$existing) {
-                Beneficiary::create([
+                $beneficiary= Beneficiary::create([
                     'user_id' => $requestData->user_id,
                     'beneficiary_request_id' => $requestData->id,
                     'priority_ar' => $validated['priority_ar'],
@@ -314,7 +314,9 @@ class BeneficiaryRequestController extends Controller
             }
         }
 
-        return response()->json(['message' => 'Request status updated successfully']);
+        return response()->json(['message' => 'Request status updated successfully',
+            'beneficiary_id'=> $beneficiary->id
+        ]);
     }
 
     public function getBeneficiariesByPriority(Request $request)

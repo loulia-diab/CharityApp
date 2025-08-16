@@ -92,6 +92,7 @@ Route::prefix('beneficiary_request')->group(function () {
   //  Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
 });
     Route::get('/beneficiaries/unsorted', [BeneficiaryController::class, 'getUnsortedBeneficiaries']);
+    Route::get('/volunteers/getToSort', [VolunteerController::class, 'getAllVolunteers']);
 
 Route::prefix('gift')->group(function () {
     Route::post('donateAsGift', [GiftController::class, 'donateAsGift']);

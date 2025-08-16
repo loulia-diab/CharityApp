@@ -59,5 +59,30 @@ class VolunteerController extends Controller
         ]);
     }
 
+    public function getAllVolunteers(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
 
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $locale = app()->getLocale();
+
+        $volunteers = Volunteer::with(['volunteer_request.types'])
+            ->get()
+            ->map(function ($volunteer) use ($locale) {
+                return [
+                    'id' => $volunteer->id,
+                    'name' => $volunteer->volunteer_request->{'full_name_' . $locale},
+                    'phone' => $volunteer->volunteer_request->phone,
+                    'preferred_times' => $volunteer->volunteer_request->{'preferred_times_' . $locale},
+                    'preferred_types' => $volunteer->volunteer_request->types->map(function ($type) use ($locale) {
+                        return $type->{'name_' . $locale};
+                    })->toArray(),
+                ];
+            });
+
+        return response()->json($volunteers);
+    }
 }

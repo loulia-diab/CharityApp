@@ -403,6 +403,7 @@ class BeneficiaryController extends Controller
         return response()->json($allActivities);
     }
 
+
     // ADMIN
 
     public function getBeneficiariesWithActivities(Request $request)
@@ -519,6 +520,28 @@ class BeneficiaryController extends Controller
     }
 
 
+    public function getUnsortedBeneficiaries(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $locale = app()->getLocale();
 
+        $beneficiaries = Beneficiary::where('is_sorted', false)
+            ->with('beneficiary_request') // جلب بيانات الطلب المرتبط
+            ->get()
+            ->map(function ($beneficiary) use ($locale) {
+                return [
+                    'beneficiary_id' => $beneficiary->id,
+                    'name' => $beneficiary->beneficiary_request->{'name_' . $locale},
+                    'main_category' => $beneficiary->beneficiary_request->{'main_category_' . $locale},
+                    'sub_category' => $beneficiary->beneficiary_request->{'sub_category_' . $locale},
+                    'priority' => $beneficiary->{'priority_' . $locale},
+                ];
+            });
+
+        return response()->json($beneficiaries);
+    }
 
 }

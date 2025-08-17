@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\user;
 
 use App\Http\Controllers\Controller;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -175,5 +176,63 @@ class UserController extends Controller
         ]);
     }
 
+    public function getMyDonations(Request $request)
+    {
+        $user = auth()->guard('api')->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $locale = app()->getLocale();
+
+        try {
+            $donations = Transaction::query()
+                ->where('user_id', $user->id)
+                ->where('type', 'donation')
+                ->where('direction', 'in')
+                ->where(function ($query) {
+                    $query->where('box_id', '!=', 14)
+                        ->orWhereNull('box_id');
+                })
+                ->whereDoesntHave('campaign.category', function ($query) {
+                    $query->whereIn('main_category', ['Sponsorship', 'InKind']);
+                })
+                ->with([
+                    'campaign.category',
+                    'box'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($transaction) use ($locale) {
+                    if ($transaction->campaign) {
+                        return [
+                            'title'       => $transaction->campaign->{'title_' . $locale},
+                            'image'       => $transaction->campaign->image,
+                            'amount'      => $transaction->amount,
+                            'date'        => $transaction->created_at->toDateTimeString(),
+                        ];
+                    } elseif ($transaction->box) {
+                        return [
+                            'title'       => $transaction->box->{'name_' . $locale},
+                            'image'       => $transaction->box->image,
+                            'amount'      => $transaction->amount,
+                            'date'        => $transaction->created_at->toDateTimeString(),
+                        ];
+                    }
+                    return null;
+                })
+                ->filter()
+                ->values();
+
+            return response()->json([
+                'message'   => 'تم جلب التبرعات بنجاح',
+                'donations' => $donations
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حصل خطأ أثناء جلب البيانات',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
 
 }

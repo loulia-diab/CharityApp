@@ -143,7 +143,7 @@ class VolunteerRequestController extends Controller
             ->map(function ($request) use ($locale, $fallback) {
                 return [
                     'id' => $request->id,
-                    'full_name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
+                    'name' => $request->{'full_name_' . $locale} ?? $request->{'full_name_' . $fallback},
                     'status' => $request->{'status_' . $locale} ?? $request->{'status_' . $fallback},
                     'created_at' => $request->created_at->toDateTimeString(),
                 ];
@@ -314,14 +314,16 @@ class VolunteerRequestController extends Controller
 
         // في حال القبول، أضف المتطوع
         if ($validated['status'] === 'accepted') {
-            Volunteer::firstOrCreate([
+            $Volunteer = Volunteer::firstOrCreate([
                 'volunteer_request_id' => $volunteerRequest->id,
             ], [
                 'user_id' => $volunteerRequest->user_id,
             ]);
         }
 
-        return response()->json(['message' => 'Status updated successfully']);
+        return response()->json(['message' => 'Status updated successfully',
+            'Volunteer_id'=> $Volunteer->id
+            ]);
     }
 
 }

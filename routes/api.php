@@ -38,8 +38,6 @@ Route::prefix('user')->group(function () {
     Route::post('/register', [UserAuthController::class, 'register']);
     Route::post('/login', [UserAuthController::class, 'login']);
     Route::post('/resetPassword', [UserAuthController::class, 'resetPassword']);
-  //  Route::get('/googleLogin', [GoogleController::class, 'googleLogin']);
-  //  Route::get('/google_callback', [GoogleController::class, 'handleGoogleCallback'])->middleware('checkLanguage');
     Route::post('/google', [GoogleController::class, 'loginWithGoogle']);
 
     Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
@@ -49,6 +47,8 @@ Route::prefix('user')->group(function () {
         Route::post('/changePassword', [UserController::class, 'changePassword']);
         Route::get('/getAll', [UserController::class, 'getAllUsers']);
         Route::get('/getMyRecharges', [UserController::class, 'getMyRecharges']);
+        Route::get('/getMyDonations', [UserController::class, 'getMyDonations']);
+
     });
 });
 
@@ -91,6 +91,9 @@ Route::prefix('beneficiary_request')->group(function () {
   //  Route::get('/getBeneficiariesByPriority', [BeneficiaryRequestController::class, 'getBeneficiariesByPriority']);
   //  Route::get('/getFilterByCategory', [BeneficiaryRequestController::class, 'getBeneficiaryRequestsByCategory']);
 });
+    Route::get('/beneficiaries/unsorted', [BeneficiaryController::class, 'getUnsortedBeneficiaries']);
+    Route::get('/volunteers/getToSort', [VolunteerController::class, 'getAllVolunteers']);
+
 Route::prefix('gift')->group(function () {
     Route::post('donateAsGift', [GiftController::class, 'donateAsGift']);
     Route::get('getMyGiftDonations', [GiftController::class, 'getMyGiftDonations']);
@@ -98,6 +101,7 @@ Route::prefix('gift')->group(function () {
 Route::prefix('transaction')->group(function () {
     Route::post('recharge', [TransactionController::class, 'rechargeUserBalance']);
     Route::post('donateOnceTime', [TransactionController::class, 'donate']);
+
 });
 Route::prefix('message')->group(function () {
     Route::post('send', [MessageController::class, 'sendMessage']);
@@ -122,6 +126,8 @@ Route::prefix('campaigns')->group(function () {
     Route::post('/activate/{Id}', [CampaignController::class, 'activateCampaign']);
     Route::post('/archive/{Id}', [CampaignController::class, 'archiveCampaign']);
     Route::get('/archivedCampaigns', [CampaignController::class, 'getArchivedCampaigns']);
+    Route::get('/{campaign_id}/donors', [TransactionController::class, 'getCampaignDonors']);
+
 
     // not used yet
     Route::get('/filter/byDate', [CampaignFilterController::class, 'filterCampaignsByDate']);

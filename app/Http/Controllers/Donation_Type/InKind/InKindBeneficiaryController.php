@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Donation_Type\InKind;
 
 use App\Http\Controllers\Controller;
+use App\Models\Beneficiary;
 use App\Models\InKind;
 use Illuminate\Http\Request;
 
@@ -32,13 +33,18 @@ class InKindBeneficiaryController extends Controller
 
         $inKind->beneficiaries()->syncWithoutDetaching($request->beneficiary_ids);
 
-        // جلب المستفيدين بعد التحديث
+// تحديث is_stored لكل المستفيدين المضافين
+        Beneficiary::whereIn('id', $request->beneficiary_ids)
+            ->update(['is_sorted' => true]);
+
+// جلب المستفيدين بعد التحديث
         $inKind->load('beneficiaries');
 
         return response()->json([
             'message' => 'Beneficiaries added to in-kind donation successfully',
             'data' => $inKind->beneficiaries,
         ]);
+
     }
 
     // جلب مستفيدين تبرع عيني لحالو

@@ -109,7 +109,7 @@ Route::prefix('message')->group(function () {
 });
 Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);
-    Route::get('/getAll',[CategoryController::class,'getAllCategories']);
+    Route::get('/getAll/{main_category}',[CategoryController::class,'getAllCategoriesForAdmin']);
     Route::get('/get/{categoryId}',[CategoryController::class,'getCategoryById']);
     Route::delete('/delete/{categoryId}',[CategoryController::class,'deleteCategory']);
     Route::post('/update/{categoryId}',[CategoryController::class,'updateCategory']);
@@ -186,6 +186,7 @@ Route::prefix('inKinds')->group(function () {
 });
 
 // استفاداتي
+Route::get('/beneficiary/getAllBySorted', [BeneficiaryController::class, 'getBeneficiariesWithActivities']);
 Route::get('/beneficiary/getAll', [BeneficiaryController::class, 'getBeneficiaryActivities']);
 // تطوعاتي
 Route::get('/volunteer/getAll', [VolunteerController::class, 'getVolunteerCampaigns']);

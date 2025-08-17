@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Donation_Type\Sponsorship;
 
 use App\Enums\CampaignStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Beneficiary;
 use App\Models\Campaigns\Campaign;
 use App\Models\Category;
 use App\Models\Sponsorship;
@@ -75,7 +76,11 @@ class SponsorshipController extends Controller
                 'beneficiary_id' => $request->beneficiary_id,
                 'is_permanent' => $request->is_permanent ?? false,
             ]);
-
+            $beneficiary = Beneficiary::find($request->beneficiary_id);
+            if ($beneficiary) {
+                $beneficiary->is_sorted = true;
+                $beneficiary->save();
+            }
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إنشاء الكفالة والحملة بنجاح' : 'Sponsorship and campaign created successfully',
                 'data' => [

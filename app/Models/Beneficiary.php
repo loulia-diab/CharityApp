@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Campaigns\Campaign;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
@@ -25,10 +26,11 @@ class Beneficiary extends Model
 
     public function campaigns()
     {
-        return $this->belongsToMany(Beneficiary::class, 'campaign_beneficiary')
+        return $this->belongsToMany(Campaign::class, 'campaign_beneficiary')
             ->withTimestamps()
             ->withPivot('admin_id');
     }
+
 
     public function humanCases()
     {

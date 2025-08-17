@@ -351,7 +351,6 @@ class CampaignController extends Controller
             'status' => 200
         ]);
     }
-
     public function getCampaignsByStatus($categoryId, $status)
     {
         $admin = auth('admin')->user();
@@ -412,7 +411,6 @@ class CampaignController extends Controller
             ], 500);
         }
     }
-
     public function getCampaignsByCategory($categoryId)
     {
         $admin = auth('admin')->user();

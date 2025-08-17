@@ -170,9 +170,7 @@ class InKindController extends Controller
         ]);
     }
 
-
     // ADMIN
-
     public function acceptInKind(Request $request)
     {
         $admin = auth('admin')->user();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Donation_Type\Campaign;
 
 use App\Http\Controllers\Controller;
+use App\Models\Beneficiary;
 use App\Models\Campaigns\Campaign;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -54,9 +55,11 @@ class CampaignBeneficiaryController extends Controller
             foreach ($newIds as $id) {
                 $syncData[$id] = ['admin_id' => $admin->id];
             }
-
-            // إضافة المستفيدين الجدد فقط
+// إضافة المستفيدين الجدد فقط
             $campaign->beneficiaries()->syncWithoutDetaching($syncData);
+
+// تحديث is_stored لكل المستفيدين الجدد
+            Beneficiary::whereIn('id', $newIds)->update(['is_sorted' => true]);
 
             return response()->json([
                 'message' => $locale === 'ar' ? 'تمت إضافة المستفيدين الجدد بنجاح' : 'New beneficiaries added successfully',

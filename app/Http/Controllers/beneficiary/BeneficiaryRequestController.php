@@ -299,6 +299,8 @@ class BeneficiaryRequestController extends Controller
         // تحديث الطلب
         $requestData->update($updateData);
 
+        $response = ['message' => 'Request status updated successfully'];
+
         if ($status === 'accepted') {
             // التحقق إن كان المستفيد موجود مسبقًا
             $existing = Beneficiary::where('beneficiary_request_id', $requestData->id)->first();
@@ -311,12 +313,11 @@ class BeneficiaryRequestController extends Controller
                     'priority_en' => $validated['priority_en'],
                     'is_sorted' => false, // يمكنك تعديله حسب الحاجة
                 ]);
+                $response['beneficiary_id'] = $beneficiary->id;
             }
         }
 
-        return response()->json(['message' => 'Request status updated successfully',
-            'beneficiary_id'=> $beneficiary->id
-        ]);
+        return response()->json([$response]);
     }
 
     public function getBeneficiariesByPriority(Request $request)

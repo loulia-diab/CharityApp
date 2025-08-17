@@ -34,7 +34,7 @@ class MessageController extends Controller
         ], 201);
     }
 
-    public function getMessagesFilterByRead(Request $request)
+    public function getAllMessages(Request $request)
     {
         $admin = auth()->guard('admin')->user();
 
@@ -42,12 +42,7 @@ class MessageController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $request->validate([
-            'is_read_by_admin' => 'required|boolean',
-        ]);
-
         $messages = Message::with('user:id,name')
-            ->where('is_read_by_admin', $request->is_read_by_admin)
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($message) {
@@ -63,4 +58,5 @@ class MessageController extends Controller
             'data' => $messages
         ]);
     }
+
 }

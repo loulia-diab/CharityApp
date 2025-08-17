@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Donation_Type\Campaign;
 
 use App\Http\Controllers\Controller;
+use App\Models\Beneficiary;
 use App\Models\Campaigns\Campaign;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class CampaignBeneficiaryController extends Controller
         ]);
 
         try {
-            $campaign = Campaign::with('category')->findOrFail($campaignId);
+            $campaign = Campaign::with('category', 'beneficiaries')->findOrFail($campaignId);
 
             if (!$campaign->category || $campaign->category->main_category !== 'Campaign') {
                 return response()->json([
@@ -34,17 +35,36 @@ class CampaignBeneficiaryController extends Controller
                 ], 404);
             }
 
-            // نحافظ على الموجود ونضيف الجدد
+            // جلب المستفيدين المضافين مسبقًا
+            $existingIds = $campaign->beneficiaries->pluck('id')->toArray();
+
+            // تصفية المستفيدين الجدد فقط
+            $newIds = array_diff($request->beneficiary_ids, $existingIds);
+
+
+            if (empty($newIds)) {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'جميع المستفيدين مضافين مسبقًا' : 'All beneficiaries are already added',
+                    'status' => 200,
+                    'data' => []
+                ]);
+            }
+
+            // تحضير بيانات الربط
             $syncData = [];
-            foreach ($request->beneficiary_ids as $id) {
+            foreach ($newIds as $id) {
                 $syncData[$id] = ['admin_id' => $admin->id];
             }
+// إضافة المستفيدين الجدد فقط
             $campaign->beneficiaries()->syncWithoutDetaching($syncData);
 
+// تحديث is_stored لكل المستفيدين الجدد
+            Beneficiary::whereIn('id', $newIds)->update(['is_sorted' => true]);
+
             return response()->json([
-                'message' => $locale === 'ar' ? 'تمت إضافة المستفيدين بنجاح' : 'Beneficiaries added successfully',
+                'message' => $locale === 'ar' ? 'تمت إضافة المستفيدين الجدد بنجاح' : 'New beneficiaries added successfully',
                 'status' => 200,
-                'data' => array_keys($syncData)
+                'data' => array_values($newIds)
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -60,6 +80,7 @@ class CampaignBeneficiaryController extends Controller
             ], 500);
         }
     }
+
 
     public function removeBeneficiariesFromCampaign(Request $request, $campaignId)
     {
@@ -120,7 +141,7 @@ class CampaignBeneficiaryController extends Controller
             ], 401);
         }
 
-        $campaign = Campaign::with(['beneficiaries', 'category'])->find($campaignId);
+        $campaign = Campaign::with(['beneficiaries.beneficiary_request', 'category'])->find($campaignId);
 
         if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
             return response()->json([
@@ -129,13 +150,27 @@ class CampaignBeneficiaryController extends Controller
             ], 404);
         }
 
+        $beneficiaries = $campaign->beneficiaries->map(function ($beneficiary) use ($locale) {
+            $request = $beneficiary->beneficiary_request;
+
+            return [
+                'id' => $beneficiary->id,
+                'user_id' => $request?->user_id,
+                'name' => $locale === 'ar' ? $request?->name_ar : $request?->name_en,
+                'phone' => $request?->phone,
+                'email' => $request?->user?->email, // من جدول users
+                'gender' => $locale === 'ar' ? $request?->gender_ar : $request?->gender_en,
+                'birth_date' => $request?->birth_date,
+                'address' => $locale === 'ar' ? $request?->address_ar : $request?->address_en,
+            ];
+        });
+
         return response()->json([
             'message' => $locale === 'ar' ? 'تم جلب المستفيدين بنجاح' : 'Beneficiaries fetched successfully',
-            'data' => $campaign->beneficiaries,
+            'data' => $beneficiaries,
             'status' => 200
         ]);
     }
-
 
 
 

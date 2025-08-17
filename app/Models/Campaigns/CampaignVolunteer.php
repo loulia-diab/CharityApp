@@ -4,6 +4,7 @@ namespace App\Models\Campaigns;
 
 use App\Models\Admin;
 use App\Models\Volunteer;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class CampaignVolunteer extends Model
@@ -27,4 +28,9 @@ class CampaignVolunteer extends Model
     {
         return $this->belongsTo(Admin::class);
     }
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
+    }
+
 }

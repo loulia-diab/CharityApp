@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Donation_Type\HumanCase;
 
 use App\Enums\CampaignStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Beneficiary;
 use App\Models\Campaigns\Campaign;
 use App\Models\Category;
 use App\Models\HumanCase;
@@ -220,6 +221,11 @@ class HumanCaseController extends Controller
                 'is_emergency' => $request->is_emergency ?? false,
             ]);
 
+            $beneficiary = Beneficiary::find($request->beneficiary_id);
+            if ($beneficiary) {
+                $beneficiary->is_sorted = true;
+                $beneficiary->save();
+            }
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إنشاء الحالة الإنسانية والحملة بنجاح' : 'Human case and campaign created successfully',
                 'data' => [

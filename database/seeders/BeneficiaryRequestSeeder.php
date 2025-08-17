@@ -93,4 +93,3 @@ class BeneficiaryRequestSeeder extends Seeder
         }
     }
 }
-

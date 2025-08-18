@@ -39,7 +39,7 @@ class CategorySeeder extends Seeder
             DB::table('categories')->updateOrInsert(
                 ['main_category'=>$category['main_category'],
                     'name_category_en'=>$category['name_category_en'],
-                    'name_category_ar'=>$category['name_category_ar']],
+                    'name_category_ar'=>$category['name_category_ar']]
             );
         }
     }

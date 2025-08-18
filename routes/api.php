@@ -19,7 +19,11 @@ use App\Http\Controllers\Donation_Type\Sponsorship\SponsorshipController;
 use App\Http\Controllers\GiftController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\MessageController;
+
 use App\Http\Controllers\ReportController;
+
+use App\Http\Controllers\MoneyController;
+
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\user\GoogleController;
 use App\Http\Controllers\user\UserAuthController;
@@ -100,11 +104,20 @@ Route::prefix('gift')->group(function () {
 Route::prefix('transaction')->group(function () {
     Route::post('recharge', [TransactionController::class, 'rechargeUserBalance']);
     Route::post('donateOnceTime', [TransactionController::class, 'donate']);
+    Route::post('spend', [TransactionController::class, 'spend']);
+    Route::get('/AllExchanges', [TransactionController::class, 'getAllExchanges']);
+    Route::get('/AllDonations', [TransactionController::class, 'getAllDonations']);
+    Route::get('/AllDonors', [TransactionController::class, 'getAllDonors']);
 
 });
 Route::prefix('message')->group(function () {
     Route::post('send', [MessageController::class, 'sendMessage']);
-    Route::get('getFilterByRead', [MessageController::class, 'getMessagesFilterByRead']);
+    Route::get('getAll', [MessageController::class, 'getAllMessages']);
+});
+Route::prefix('money')->group(function () {
+    Route::get('/boxes/{box_id}/stats', [MoneyController::class, 'getBoxStats']);
+    Route::get('/campaigns/{campaign_id}/stats', [MoneyController::class, 'getCampaignStats']);
+
 });
 Route::prefix('category')->group(function () {
     Route::post('/add',[CategoryController::class,'addCategory']);

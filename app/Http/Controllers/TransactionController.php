@@ -145,6 +145,189 @@ class TransactionController extends Controller
         }
     }
 
+    public function spend(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'campaign_id' => 'nullable|exists:campaigns,id',
+            'box_id' => 'nullable|exists:boxes,id',
+        ]);
+
+        if (!$request->campaign_id && !$request->box_id) {
+            return response()->json([
+                'message' => 'يجب تحديد حملة أو صندوق للصرف'
+            ], 422);
+        }
+
+        return DB::transaction(function () use ($admin, $request) {
+            $transactionData = [
+                'admin_id'   => $admin->id,
+                'type'       => 'exchange',
+                'direction'  => 'out',
+                'amount'     => $request->amount,
+                'campaign_id'=> $request->campaign_id,
+                'box_id'     => $request->box_id,
+            ];
+
+            // إنشاء عملية الصرف
+            $transaction = Transaction::create($transactionData);
+
+            // إذا كان الصرف من صندوق → تعديل الرصيد
+            if ($request->box_id) {
+                $box = Box::findOrFail($request->box_id);
+
+                if ($box->balance < $request->amount) {
+                    throw new \Exception('الرصيد المتاح في الصندوق غير كافٍ');
+                }
+
+                $box->decrement('balance', $request->amount);
+            }
+
+            return response()->json([
+                'message'     => 'تم تسجيل عملية الصرف بنجاح',
+                'transaction' => $transaction,
+            ]);
+        });
+    }
+
+    public function getAllExchanges()
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        // جلب كل عمليات الصرف
+        $exchanges = Transaction::where('type', 'exchange')
+            ->where('direction', 'out')
+            ->with(['box:id,name_ar,name_en', 'campaign:id,title_ar,title_en'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($transaction) {
+                $locale = app()->getLocale();
+
+                $target = null;
+                $target_id = null;
+
+                if ($transaction->box_id) {
+                    $target_id = $transaction->box->id;
+                    $target = $locale === 'ar' ? $transaction->box->name_ar : $transaction->box->name_en;
+                } elseif ($transaction->campaign_id) {
+                    $target_id = $transaction->campaign->id;
+                    $target = $locale === 'ar' ? $transaction->campaign->title_ar : $transaction->campaign->title_en;
+                }
+
+                return [
+                    'id'         => $transaction->id,
+                    'target'     => $target,
+                    'target_id'  => $target_id,
+                    'amount'     => $transaction->amount,
+                    'spent_at'   => $transaction->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json([
+            'exchanges' => $exchanges,
+        ]);
+    }
+
+    public function getAllDonations()
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        $donations = Transaction::where('type', 'donation')
+            ->where('direction', 'in')
+            ->with([
+                'user:id,name',
+                'box:id,name_ar,name_en',
+                'campaign:id,title_ar,title_en'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($transaction) {
+                $locale = app()->getLocale();
+
+                $target_id = null;
+                $target = null;
+
+                if ($transaction->box_id) {
+                    $target_id = $transaction->box->id;
+                    $target = $locale === 'ar' ? $transaction->box->name_ar : $transaction->box->name_en;
+                } elseif ($transaction->campaign_id) {
+                    $target_id = $transaction->campaign->id;
+                    $target = $locale === 'ar' ? $transaction->campaign->title_ar : $transaction->campaign->title_en;
+                }
+
+                return [
+                    'donation_id' => $transaction->id,
+                    'user_id'     => $transaction->user->id ?? null,
+                    'user_name'   => $transaction->user->name ?? null,
+                    'target'      => $target,
+                    'target_id'   => $target_id,
+                    'amount'      => $transaction->amount,
+                    'donated_at'  => $transaction->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json([
+            'donations' => $donations,
+        ]);
+    }
+
+    public function getAllDonors()
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        $donations = Transaction::where('type', 'donation')
+            ->where('direction', 'in')
+            ->with([
+                'user:id,name,email,phone',
+                'box:id,name_ar,name_en',
+                'campaign:id,title_ar,title_en'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($transaction) {
+                $locale = app()->getLocale();
+
+                // تحديد الجهة المتبرع لها (صندوق أو حملة)
+                $target = null;
+                if ($transaction->box_id) {
+                    $target = $locale === 'ar' ? $transaction->box->name_ar : $transaction->box->name_en;
+                } elseif ($transaction->campaign_id) {
+                    $target = $locale === 'ar' ? $transaction->campaign->title_ar : $transaction->campaign->title_en;
+                }
+
+                return [
+                    'user_id'    => $transaction->user->id ?? null,
+                    'user_name'  => $transaction->user->name ?? null,
+                    'contact'    => $transaction->user->email ?? $transaction->user->phone, // واحد بس
+                    'target'     => $target,
+                    'amount'     => $transaction->amount,
+                    'donated_at' => $transaction->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json([
+            'donors' => $donations,
+        ]);
+    }
+
     public function getCampaignDonors($campaign_id)
     {
         $admin = auth()->guard('admin')->user();

@@ -313,19 +313,22 @@ class VolunteerRequestController extends Controller
 
         $volunteerRequest->update($updateData);
 
+        $response = ['message' => 'Status updated successfully'];
+
         // في حال القبول، أضف المتطوع
         if ($validated['status'] === 'accepted') {
-            $Volunteer = Volunteer::firstOrCreate([
-                'volunteer_request_id' => $volunteerRequest->id,
-            ], [
-                'user_id' => $volunteerRequest->user_id,
+            $volunteer =Volunteer::firstOrCreate(
+                ['volunteer_request_id' => $volunteerRequest->id,],
+                ['user_id' => $volunteerRequest->user_id,
             ]);
+            $response['volunteer_id'] = $volunteer->id;
         }
         // إرسال إشعار للمستخدم
         $user = User::find($volunteerRequest->user_id); // صحّحت $requestData إلى $volunteerRequest
         if ($user) {
             $title = [];
             $body = [];
+
 
             if ($validated['status'] === 'accepted') {
                 $title = [
@@ -356,9 +359,12 @@ class VolunteerRequestController extends Controller
                 'body_ar' => $body['ar'],
             ]));
         }
+        /*
         return response()->json(['message' => 'Status updated successfully',
             'Volunteer_id'=> $Volunteer->id
             ]);
-    }
+*/
+       return response()->json([$response]);
 
+    }
 }

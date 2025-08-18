@@ -5,6 +5,7 @@ namespace App\Http\Controllers\volunteer;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Day;
+use App\Models\User;
 use App\Models\Volunteer;
 use App\Models\Volunteer_request;
 use App\Models\Volunteering_type;
@@ -320,7 +321,41 @@ class VolunteerRequestController extends Controller
                 'user_id' => $volunteerRequest->user_id,
             ]);
         }
+        // إرسال إشعار للمستخدم
+        $user = User::find($volunteerRequest->user_id); // صحّحت $requestData إلى $volunteerRequest
+        if ($user) {
+            $title = [];
+            $body = [];
 
+            if ($validated['status'] === 'accepted') {
+                $title = [
+                    'en' => 'Your request has been accepted',
+                    'ar' => 'تم قبول طلبك',
+                ];
+                $body = [
+                    'en' => 'Congratulations! Your request is now approved.',
+                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت متطوعًا.',
+                ];
+            } else {
+                $title = [
+                    'en' => 'Your request has been rejected',
+                    'ar' => 'تم رفض طلبك',
+                ];
+                $body = [
+                    'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_en'],
+                    'ar' => 'نعتذر، تم رفض طلبك. السبب: ' . $validated['reason_ar'],
+                ];
+            }
+
+            $notificationService = app()->make(\App\Services\NotificationService::class);
+            $notificationService->sendFcmNotification(new Request([
+                'user_id' => $user->id,
+                'title_en' => $title['en'],
+                'title_ar' => $title['ar'],
+                'body_en' => $body['en'],
+                'body_ar' => $body['ar'],
+            ]));
+        }
         return response()->json(['message' => 'Status updated successfully',
             'Volunteer_id'=> $Volunteer->id
             ]);

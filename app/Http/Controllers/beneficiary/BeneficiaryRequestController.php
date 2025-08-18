@@ -4,6 +4,8 @@ namespace App\Http\Controllers\beneficiary;
 
 use App\Http\Controllers\Controller;
 use App\Models\Beneficiary;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\App;
 use App\Models\Beneficiary_request;
@@ -313,7 +315,37 @@ class BeneficiaryRequestController extends Controller
                 ]);
             }
         }
-
+        //  إرسال إشعار للمستخدم
+        $user = User::find($requestData->user_id);
+        if ($user) {
+            if ($status === 'accepted') {
+                $title = [
+                    'en' => 'Your request has been accepted',
+                    'ar' => 'تم قبول طلبك',
+                ];
+                $body = [
+                    'en' => 'Congratulations! Your request is now approved.',
+                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت مستفيدًا.',
+                ];
+            } else {
+                $title = [
+                    'en' => 'Your request has been rejected',
+                    'ar' => 'تم رفض طلبك',
+                ];
+                $body = [
+                    'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_of_rejection_en'],
+                    'ar' => 'نعتذر، تم رفض طلبك. السبب: ' . $validated['reason_of_rejection_ar'],
+                ];
+            }
+            $notificationService = app()->make(\App\Services\NotificationService::class);
+            $notificationService->sendFcmNotification(new Request([
+                'user_id' => $user->id,
+                'title_en' => $title['en'],
+                'title_ar' => $title['ar'],
+                'body_en' => $body['en'],
+                'body_ar' => $body['ar'],
+            ]));
+        }
         return response()->json(['message' => 'Request status updated successfully',
             'beneficiary_id'=> $beneficiary->id
         ]);

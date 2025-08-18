@@ -98,4 +98,14 @@ class Campaign extends Model
     {
         return $this->hasOne(inKind::class);
     }
+    public function reports()
+    {
+        return $this->hasMany(Report::class);
+    }
+    public function transactions()
+    {
+        return $this->hasMany(\App\Models\Transaction::class);
+    }
+
+
 }

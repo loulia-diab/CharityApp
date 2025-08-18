@@ -302,6 +302,8 @@ class BeneficiaryController extends Controller
 
         return response()->json($formatted);
     }
+
+    ///////////////////////////////////////////////////////
 // USER
     public function getBeneficiaryActivities(Request $request)
     {
@@ -403,10 +405,8 @@ class BeneficiaryController extends Controller
         return response()->json($allActivities);
     }
 
-
     // ADMIN
-
-    public function getBeneficiariesWithActivities(Request $request)
+    public function getSortedBeneficiariesActivities(Request $request)
     {
         $locale = app()->getLocale();
         $admin = auth('admin')->user();
@@ -418,11 +418,7 @@ class BeneficiaryController extends Controller
             ], 401);
         }
 
-        $request->validate([
-            'is_sorted' => 'required|boolean',
-        ]);
-
-        $beneficiaries = Beneficiary::where('is_sorted', $request->is_sorted)
+        $beneficiaries = Beneficiary::where('is_sorted',true)
             ->with([
                 'beneficiary_request',
                 'humanCases.campaign.category',
@@ -439,12 +435,9 @@ class BeneficiaryController extends Controller
                 $data = [
                     'id' => $b->id,
                     'full_name' => $b->beneficiary_request?->{"name_{$locale}"},
-                   // 'details' => $b->beneficiary_request?->details ?? null,
+                  // 'details' => $b->beneficiary_request?->details ?? null,
                 ];
-
-                if ($request->is_sorted) {
                     $activities = collect();
-
                     // الحالات الإنسانية
                     foreach ($b->humanCases as $hc) {
                         $activities->push([
@@ -506,15 +499,13 @@ class BeneficiaryController extends Controller
                     }
 
                     $data['activities'] = $activities->sortByDesc('date')->values();
-                }
+
 
                 return $data;
             });
 
         return response()->json([
-            'message' => $request->is_sorted
-                ? ($locale === 'ar' ? 'المستفيدين المفروزين' : 'Stored beneficiaries')
-                : ($locale === 'ar' ? 'المستفيدين غير المفروزين' : 'Unstored beneficiaries'),
+            'message' =>( $locale === 'ar' ? 'المستفيدين المفروزين' : 'Stored beneficiaries'),
             'data' => $beneficiaries,
         ]);
     }
@@ -543,5 +534,110 @@ class BeneficiaryController extends Controller
 
         return response()->json($beneficiaries);
     }
+/*
+    public function getBeneficiaryDetails($beneficiary_id)
+    {
+        $locale = app()->getLocale();
+        $admin = auth('admin')->user();
 
+        if (!$admin) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized',
+                'status' => 401
+            ], 401);
+        }
+if()
+        $beneficiaries = Beneficiary::where('is_sorted',true)
+            ->with([
+                'beneficiary_request',
+                'humanCases.campaign.category',
+                'humanCases.campaign.admin',
+                'sponsorships.campaign.category',
+                'sponsorships.campaign.admin',
+                'inKinds.campaign.category',
+                'inKinds.campaign.admin',
+                'campaigns.category',
+                'campaigns.admin',
+            ])
+            ->get()
+            ->map(function ($b) use ($locale) {
+                $data = [
+                    'id' => $b->id,
+                    'full_name' => $b->beneficiary_request?->{"name_{$locale}"},
+                    // 'details' => $b->beneficiary_request?->details ?? null,
+                ];
+                $activities = collect();
+                // الحالات الإنسانية
+                foreach ($b->humanCases as $hc) {
+                    $activities->push([
+                        'id' => $hc->id,
+                        'type' => 'human_case',
+                        'beneficiary_id' => $hc->beneficiary_id,
+                        'beneficiary_name' => $b->beneficiary_request?->{"name_{$locale}"},
+                        'title' => $hc->campaign?->{"title_{$locale}"},
+                        'image' => $hc->campaign?->image,
+                        'category' => $hc->campaign?->category?->{"name_category_{$locale}"},
+                        'admin_id' => $hc->campaign->admin?->id,
+                        'date' => $hc->created_at,
+                    ]);
+                }
+
+                // الكفالات
+                foreach ($b->sponsorships as $sp) {
+                    $activities->push([
+                        'id' => $sp->id,
+                        'type' => 'sponsorship',
+                        'beneficiary_id' => $sp->beneficiary_id,
+                        'beneficiary_name' => $b->beneficiary_request?->{"name_{$locale}"},
+                        'title' => $sp->campaign?->{"title_{$locale}"},
+                        'image' => $sp->campaign?->image,
+                        'category' => $sp->campaign?->category?->{"name_category_{$locale}"},
+                        'admin_id' => $sp->campaign->admin?->id,
+                        'date' => $sp->created_at,
+                    ]);
+                }
+
+                // التبرعات العينية
+                foreach ($b->inKinds as $ik) {
+                    $activities->push([
+                        'id' => $ik->id,
+                        'type' => 'in_kind',
+                        'beneficiary_id' => $b->id,
+                        'beneficiary_name' => $b->beneficiary_request?->{"name_{$locale}"},
+                        'title' => $ik->campaign?->{"title_{$locale}"},
+                        'image' => $ik->campaign?->image,
+                        'category' => $ik->campaign?->category?->{"name_category_{$locale}"},
+                        'admin_id' => $ik->campaign->admin?->id,
+                        'date' => $ik->created_at,
+                    ]);
+                }
+
+                // الحملات العامة
+                foreach ($b->campaigns as $c) {
+                    $activities->push([
+                        'id' => $c->id,
+                        'type' => 'campaign',
+                        'beneficiary_id' => $b->id,
+                        'beneficiary_name' => $b->beneficiary_request?->{"name_{$locale}"},
+                        'title' => $c?->{"title_{$locale}"},
+                        'image' => $c->image,
+                        'category' => $c->category?->{"name_category_{$locale}"},
+                        'admin_id' => $c->admin?->id,
+                        'date' => $c->created_at,
+                    ]);
+                }
+
+                $data['activities'] = $activities->sortByDesc('date')->values();
+
+
+                return $data;
+            });
+
+        return response()->json([
+            'message' =>( $locale === 'ar' ? 'المستفيدين المفروزين' : 'Stored beneficiaries'),
+            'data' => $beneficiaries,
+        ]);
+    }
+
+*/
 }

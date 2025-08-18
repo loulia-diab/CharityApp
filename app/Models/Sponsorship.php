@@ -44,4 +44,9 @@ class Sponsorship extends Model
             ? Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString()
             : null;
     }
+    public function reports()
+    {
+        return $this->hasMany(Report::class);
+    }
+
 }

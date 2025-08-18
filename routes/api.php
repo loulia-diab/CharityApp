@@ -68,6 +68,8 @@ Route::prefix('admin')->group(function () {
 
 Route::prefix('box')->group(function () {
     Route::get('/getOne/{name_en}', [BoxController::class, 'getBoxByName'])->middleware( 'checkLanguage');
+    Route::get('/getAll', [BoxController::class, 'getAllBoxes']);
+
 });
 
 Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {

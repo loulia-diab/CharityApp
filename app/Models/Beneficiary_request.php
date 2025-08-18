@@ -43,4 +43,7 @@ class Beneficiary_request extends Model
     {
         return $this->hasMany(AssistanceDetail::class);
     }
+
+
+
 }

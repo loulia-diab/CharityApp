@@ -19,7 +19,11 @@ use App\Http\Controllers\Donation_Type\Sponsorship\SponsorshipController;
 use App\Http\Controllers\GiftController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\MessageController;
+
+use App\Http\Controllers\ReportController;
+
 use App\Http\Controllers\MoneyController;
+
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\user\GoogleController;
 use App\Http\Controllers\user\UserAuthController;
@@ -73,10 +77,8 @@ Route::prefix('box')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'checkLanguage'])->group(function () {
-
     Route::post('/setLanguage', [LanguageController::class, 'setLanguage']);
-
-Route::prefix('volunteer_request')->group(function () {
+    Route::prefix('volunteer_request')->group(function () {
     Route::post('/add', [VolunteerRequestController::class, 'addVolunteerRequest']);
     Route::get('/getAllUserRequests', [VolunteerRequestController::class, 'getAllUserVolunteerRequests']);
     Route::get('/getDetails/{id}', [VolunteerRequestController::class, 'getVolunteerRequestDetails']);
@@ -198,10 +200,14 @@ Route::prefix('inKinds')->group(function () {
 });
 
 // استفاداتي
-Route::get('/beneficiary/getAllBySorted', [BeneficiaryController::class, 'getBeneficiariesWithActivities']);
-Route::get('/beneficiary/getAll', [BeneficiaryController::class, 'getBeneficiaryActivities']);
+Route::get('/beneficiary/getAllBenefits', [BeneficiaryController::class, 'getBeneficiaryActivities']);
+// المستفيدين المفروزين معلومات
+Route::get('/beneficiary/getSorted', [BeneficiaryController::class, 'getSortedBeneficiariesActivities']);
 // تطوعاتي
 Route::get('/volunteer/getAll', [VolunteerController::class, 'getVolunteerCampaigns']);
+// معلومات المتطوعين بشو تتطوعوا للادمن
+Route::get('/volunteers/{id}', [VolunteerController::class, 'getVolunteerById']);
+
 // الدوري (كفالة)
 Route::prefix('plans')->group(function () {
     Route::get('/{planId}/check-dates', [PlanController::class, 'checkPlanDates']);
@@ -222,7 +228,12 @@ Route::prefix('plans')->group(function () {
     // جلب خطط التبرع للمستخدمين
     Route::get('/getAll/recurring/for/admin', [PlanController::class, 'getRecurringPlansDonors']);
 });
-
+// التقارير
+Route::prefix('reports')->group(function () {
+        Route::post('/addReport', [ReportController::class, 'addReport']);
+        Route::get('/getUserReports', [ReportController::class, 'getUserReports']);
+    Route::get('/getAdminReports', [ReportController::class, 'getAdminReports']);
+    });
 
 });
 

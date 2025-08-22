@@ -8,6 +8,7 @@ use App\Models\Beneficiary;
 use App\Models\Category;
 use App\Models\HumanCase;
 use App\Models\InKind;
+use App\Models\Report;
 use App\Models\Sponsorship;
 use App\Models\Volunteer;
 use Carbon\Carbon;
@@ -22,6 +23,7 @@ class Campaign extends Model
         'start_date', 'end_date', 'completed_at',
         'category_id'
     ];
+    /*
     protected static function booted()
     {
         static::saving(function ($campaign) {
@@ -34,7 +36,66 @@ class Campaign extends Model
             }
         });
     }
-    // تحويل created_at لتوقيت دمشق
+*/
+    protected static function booted()
+    {
+        static::saving(function ($campaign) {
+            $now = now();
+
+            $shouldComplete = false;
+
+            // الشرط الأول: المبلغ مكتمل
+            if ($campaign->collected_amount >= $campaign->goal_amount &&
+                $campaign->status === CampaignStatus::Active
+            ) {
+                $shouldComplete = true;
+            }
+
+            // الشرط الثاني: انتهاء الوقت
+            if ($campaign->end_date && $campaign->status === CampaignStatus::Active) {
+                if ($now->gte($campaign->end_date)) { // إذا اليوم >= نهاية الحملة
+                    $shouldComplete = true;
+                }
+            }
+
+            // إذا تحقق أي شرط
+            if ($shouldComplete) {
+                $campaign->status = CampaignStatus::Complete;
+                if (!$campaign->completed_at) {
+                    $campaign->completed_at = $now;
+                }
+            }
+        });
+    }
+
+    // Accessor ذكي لتحديث الحالة عند أي fetch
+    /*
+    public function getStatusAttribute($value)
+    {
+        $today = now()->toDateString();
+
+        // تحويل القيمة الحالية إلى Enum object
+        $currentStatus = CampaignStatus::from($value);
+
+        if ($currentStatus === CampaignStatus::Active &&
+            ($this->collected_amount >= $this->goal_amount ||
+                ($this->end_date && $this->end_date->toDateString() <= $today))
+        ) {
+            $this->status = CampaignStatus::Complete->value; // خزن الـ string في DB
+            if (!$this->completed_at) {
+                $this->completed_at = now();
+            }
+            $this->saveQuietly(); // تحديث DB بدون loop
+            return CampaignStatus::Complete; // رجع Enum object
+        }
+
+        return $currentStatus; // رجع Enum object
+    }
+
+
+
+*/
+
     public function getCreatedAtAttribute($value)
     {
         return Carbon::parse($value)->setTimezone('Asia/Damascus')->toDateTimeString();
@@ -56,14 +117,9 @@ class Campaign extends Model
     {
         $locale = app()->getLocale();
 
-        // لو status null رح يكسر، فحط حماية:
         return $this->status?->label($locale) ;
     }
 
-
-    protected $casts = [
-        'status' => CampaignStatus::class,
-    ];
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -106,6 +162,13 @@ class Campaign extends Model
     {
         return $this->hasMany(\App\Models\Transaction::class);
     }
+
+    protected $casts = [
+        'goal_amount' => 'float',
+        'collected_amount' => 'float',
+        'status' => CampaignStatus::class,
+    ];
+
 
 
 }

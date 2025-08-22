@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('title_ar');
             $table->text('body_en');
             $table->text('body_ar');
-            $table->boolean('is_read')->default(false);
+         //   $table->boolean('is_read')->default(false);
             $table->timestamps();
         });
 

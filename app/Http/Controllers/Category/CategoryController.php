@@ -92,7 +92,7 @@ class CategoryController extends Controller
             'name_category_ar' => 'required|string|max:255',
             'name_category_en' => 'required|string|max:255',
             'main_category' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            //'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         try {
@@ -150,7 +150,7 @@ class CategoryController extends Controller
         if (isset($validated['main_category'])) {
             $category->main_category = $validated['main_category'];
         }
-
+/*
 
         if ($request->hasFile('image')) {
             $newImage = $request->file('image');
@@ -175,6 +175,7 @@ class CategoryController extends Controller
                 $category->image_category = $path;
             }
         }
+*/
 
         $category->save();
 
@@ -184,7 +185,7 @@ class CategoryController extends Controller
                 'name_category_ar' => $category->name_category_ar,
                 'name_category_en' => $category->name_category_en,
                 'main_category' => $category->main_category,
-                'image' => $category->image_category,
+                //'image' => $category->image_category,
             ]
         ]);
     }

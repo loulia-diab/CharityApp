@@ -48,8 +48,6 @@ class PlanController extends Controller
             'plan_id' => $plan->id,
         ], 201);
     }
-
-    // تفعيل خطة الكفالة
     public function activatePlan(Request $request, $planId)
     {
         $user = auth()->user();
@@ -169,6 +167,8 @@ class PlanController extends Controller
             ], 500);
         }
     }
+    // تفعيل خطة الكفالة
+    /*
     public function createAndActivatePlanForSponsorship(Request $request, $sponsorshipId)
     {
         $user = auth()->user();
@@ -298,8 +298,159 @@ class PlanController extends Controller
             ], 500);
         }
     }
+    */
 
+    public function createAndActivatePlanForSponsorship(Request $request, $sponsorshipId)
+    {
+        $user = auth()->user();
+        $locale = app()->getLocale();
+
+        // تحقق من وجود الكفالة
+        $sponsorship = Sponsorship::findOrFail($sponsorshipId);
+        if(!$sponsorship)
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الكفالة غير موجودة.' : 'Sponsorship is not existed.'
+            ],500);
+
+        // تحقق من صحة المبلغ
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        $amountToPay = $request->input('amount');
+
+        $campaign = $sponsorship->campaign;
+
+        if ($campaign->status === 'complete' || $campaign->collected_amount >= $campaign->goal_amount) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الكفالة مكتملة ولا يمكن إنشاء خطط جديدة.' : 'Sponsorship is completed, no new plans can be created.'
+            ], 422);
+        }
+
+        if ($user->balance < $amountToPay) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'رصيد المحفظة غير كافٍ لتفعيل الخطة.' : 'Insufficient wallet balance to activate the plan.',
+                'wallet_balance' => $user->balance,
+                'required_amount' => $amountToPay
+            ], 422);
+        }
+
+        $totalActiveAmount = Plan::where('sponsorship_id', $sponsorship->id)
+            ->where('is_activated', true)
+            ->sum('amount');
+
+        $remaining = $campaign->goal_amount - $totalActiveAmount;
+
+        if ($amountToPay > $remaining) {
+            return response()->json([
+                'message' => $locale === 'ar'
+                    ? "تجاوزت المبلغ المطلوب للكفالة. المتبقي: $remaining"
+                    : "Sponsorship goal exceeded. Remaining amount: $remaining",
+                'remaining_amount' => $remaining
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // إنشاء الخطة مفعلة مباشرة
+            $plan = Plan::create([
+                'user_id' => $user->id,
+                'sponsorship_id' => $sponsorship->id,
+                'amount' => $amountToPay,
+                'recurrence' => 'monthly',
+                'is_activated' => true,
+                'start_date' => now(),
+                'end_date' => now()->addMonth(),
+            ]);
+
+            // خصم الرصيد من المستخدم
+            $user->balance -= $amountToPay;
+            $user->save();
+
+            // إنشاء معاملة ترانزاكشن (donation / in)
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'amount' => $amountToPay,
+                'type' => 'donation',
+                'direction' => 'in',
+                'campaign_id' => $campaign->id,
+            ]);
+            $transaction->refresh();
+
+            // تحديث مبلغ الحملة المجموع
+            $campaign->collected_amount += $amountToPay;
+            if ($campaign->collected_amount >= $campaign->goal_amount) {
+                $campaign->status = 'complete';
+                $campaign->completed_at = now();
+            }
+            $campaign->save();
+
+            DB::commit();
+// إرسال إشعار للمستخدم بخطة الكفالة الدورية
+            $notificationService = app()->make(\App\Services\NotificationService::class);
+
+            $title = [
+                'en' => "Sponsorship Plan Activated",
+                'ar' => "تم تفعيل خطة الكفالة",
+            ];
+
+            $body = [
+                'en' => "Your monthly sponsorship plan has been activated. The donation will be withdrawn from your wallet every month unless you cancel.",
+                'ar' => "تم تفعيل خطة الكفالة الشهرية الخاصة بك . سيتم خصم التبرع من محفظتك شهريًا إلا إذا قمت بالإلغاء.",
+            ];
+
+            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                'user_id' => $user->id,
+                'title_en' => $title['en'],
+                'title_ar' => $title['ar'],
+                'body_en' => $body['en'],
+                'body_ar' => $body['ar'],
+            ]));
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم إنشاء وتفعيل خطة الكفالة بنجاح' : 'Sponsorship plan created and activated successfully',
+                'data' => [
+                    'plan' => [
+                        'id' => $plan->id,
+                        'user_id' => $plan->user_id,
+                        'sponsorship_id' => $plan->sponsorship_id,
+                        'amount' => $plan->amount,
+                        'recurrence' => $plan->recurrence,
+                        'is_activated' => $plan->is_activated,
+                        'start_date' => $plan->start_date->format('Y-m-d H:i:s'),
+                        'end_date' => $plan->end_date->format('Y-m-d H:i:s'),
+                        'created_at' => $plan->created_at,
+                        'updated_at' => $plan->updated_at,
+                        'recurrence_label' => $plan->recurrence_label,
+                    ],
+
+                    'campaign' => [
+                        'goal_amount' => (float) $campaign->goal_amount,
+                        'collected_amount' => (float) $campaign->collected_amount,
+                        'remaining_amount' => max(0, (float) $campaign->goal_amount - (float) $campaign->collected_amount),
+                        'status' => $campaign->status,
+                    ],
+                    'transaction' => [
+                        'id' => $transaction->id,
+                        'amount' => $transaction->amount,
+                        'type' => $transaction->type,
+                        'direction' => $transaction->direction,
+                        'pdf_url' => $transaction->pdf_url ?? null,
+                        'created_at' => $transaction->created_at->format('Y-m-d H:i:s'),
+                    ],
+                ],
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إنشاء الخطة' : 'Error during plan creation',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
     // إيقاف خطة الكفالة
+    /*
     public function deactivatePlan($planId)
     {
         $user = auth()->user();
@@ -345,8 +496,76 @@ class PlanController extends Controller
             ]
         ]);
     }
+*/
+    public function deactivatePlan($planId)
+    {
+        $user = auth()->user();
+        $locale = app()->getLocale();
+
+        $plan = Plan::where('id', $planId)
+            ->where('user_id', $user->id)
+            ->whereNotNull('sponsorship_id')
+            ->where('is_activated', true)
+            ->with('sponsorship.campaign')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$plan) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الخطة غير موجودة أو غير مفعّلة' : 'Plan not found or not active',
+            ], 404);
+        }
+
+        $plan->update([
+            'is_activated' => false,
+            'end_date' => now(),
+        ]);
+
+        $campaign = $plan->sponsorship->campaign;
+
+        // إرسال إشعار للمستخدم
+        $notificationService = app()->make(\App\Services\NotificationService::class);
+
+        $title = [
+            'en' => "Sponsorship Plan Deactivated",
+            'ar' => "تم إيقاف خطة الكفالة",
+        ];
+
+        $body = [
+            'en' => "Your sponsorship plan for '{$campaign->title_en}' has been deactivated. You can reactivate it anytime if you wish.",
+            'ar' => "تم إيقاف خطة الكفالة الخاصة بك '{$campaign->title_ar}'، يمكنك إعادة تفعيلها إذا رغبت.",
+        ];
+
+        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+            'user_id' => $user->id,
+            'title_en' => $title['en'],
+            'title_ar' => $title['ar'],
+            'body_en' => $body['en'],
+            'body_ar' => $body['ar'],
+        ]));
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم إيقاف الخطة بنجاح' : 'Plan deactivated successfully',
+            'data' => [
+                'plan' => [
+                    'id' => $plan->id,
+                    'sponsorship_id' => $plan->sponsorship_id,
+                    'amount' => $plan->amount,
+                    'is_activated' => $plan->is_activated,
+                    'end_date' => $plan->end_date,
+                ],
+                'campaign' => [
+                    'goal_amount' => (float) $campaign->goal_amount,
+                    'collected_amount' => (float) $campaign->collected_amount,
+                    'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
+                    'status' => $campaign->status,
+                ]
+            ]
+        ]);
+    }
 
     // إعادة تفعيل خطة كفالة
+    /*
     public function reactivatePlan($planId)
     {
         $user = auth()->user();
@@ -382,6 +601,75 @@ class PlanController extends Controller
             'start_date' => $now,
             'end_date' => $now->copy()->addMonth(),
         ]);
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم إعادة تفعيل الخطة بنجاح' : 'Plan reactivated successfully',
+            'data' => [
+                'plan' => [
+                    'id' => $plan->id,
+                    'amount' => $plan->amount,
+                    'start_date' => $plan->start_date,
+                    'end_date' => $plan->end_date,
+                    'is_activated' => $plan->is_activated,
+                ],
+                'campaign' => [
+                    'goal_amount' => (float) $campaign->goal_amount,
+                    'collected_amount' => (float) $campaign->collected_amount,
+                    'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
+                    'status' => $campaign->status,
+                ]
+            ]
+        ]);
+    }
+*/
+    public function reactivatePlan($planId)
+    {
+        $user = auth()->user();
+        $locale = app()->getLocale();
+
+        $plan = Plan::where('id', $planId)
+            ->where('user_id', $user->id)
+            ->whereNotNull('sponsorship_id')
+            ->where('is_activated', false)
+            ->with('sponsorship.campaign')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$plan) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الخطة غير موجودة أو مفعّلة مسبقًا' : 'Plan not found or already active',
+            ], 404);
+        }
+
+        $campaign = $plan->sponsorship->campaign;
+
+        // لا يمكن إعادة تفعيل الخطة إذا كانت الكفالة مكتملة
+        if ($campaign->status === 'complete') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الكفالة مكتملة ولا يمكن تفعيل الخطط.' : 'Sponsorship is completed, cannot reactivate plan.',
+            ], 422);
+        }
+
+        // إعادة التفعيل دون خصم رصيد جديد أو ترانزاكشن
+        $now = now();
+        $plan->update([
+            'is_activated' => true,
+            'start_date' => $now,
+            'end_date' => $now->copy()->addMonth(),
+        ]);
+
+        $notificationService = app()->make(\App\Services\NotificationService::class);
+
+        $bodyEn = "Your sponsorship plan for '{$campaign->title_en}' has been reactivated. You can stop it anytime if you wish.";
+        $bodyAr = "تم إعادة تفعيل خطة الكفالة الخاصة بك '{$campaign->title_ar}'، يمكنك إيقافها في أي وقت إذا رغبت.";
+
+        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+            'user_id' => $user->id,
+            'title_en' => 'Sponsorship Plan Reactivated',
+            'title_ar' => 'إعادة تفعيل خطة الكفالة',
+            'body_en' => $bodyEn,
+            'body_ar' => $bodyAr,
+        ]));
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم إعادة تفعيل الخطة بنجاح' : 'Plan reactivated successfully',
@@ -474,6 +762,7 @@ class PlanController extends Controller
         ]);
     }
 
+    // ADMIN
     // عرض الكفلاء
     public function getSponsorshipsDonors()
     {
@@ -511,7 +800,9 @@ class PlanController extends Controller
     }
 
     // التبرعات الدورية
+
     // تفعيل
+    /*
     public function activateRecurring(Request $request)
     {
         $request->validate([
@@ -619,8 +910,137 @@ class PlanController extends Controller
             ], 500);
         }
     }
+*/
+    public function activateRecurring(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'recurrence' => 'required|in:daily,weekly,monthly',
+        ]);
+
+        $user = auth()->user();
+        $locale = app()->getLocale();
+
+        DB::beginTransaction();
+
+        try {
+            $periodicBox = Box::where('name_en', 'Periodic donation')->first();
+
+            if (!$periodicBox) {
+                return response()->json([
+                    'message' => $locale === 'ar'
+                        ? 'صندوق التبرعات العامة غير موجود.'
+                        : 'Periodic donation box not found.'
+                ], 500);
+            }
+
+            if ($user->balance < $request->amount) {
+                return response()->json([
+                    'message' => $locale === 'ar'
+                        ? 'الرصيد غير كافٍ في المحفظة.'
+                        : 'Insufficient wallet balance.',
+                ], 400);
+            }
+
+            // إنشاء الخطة
+            $plan = new Plan();
+            $plan->user_id = $user->id;
+            $plan->amount = $request->amount;
+            $plan->recurrence = $request->recurrence;
+            $plan->sponsorship_id = null; // تبرع عام
+            $plan->start_date = now();
+            $plan->is_activated = true;
+
+            // تعيين end_date حسب التكرار
+            switch ($request->recurrence) {
+                case 'daily':
+                    $plan->end_date = now()->addDay();
+                    break;
+                case 'weekly':
+                    $plan->end_date = now()->addWeek();
+                    break;
+                case 'monthly':
+                default:
+                    $plan->end_date = now()->addMonth();
+            }
+
+            $plan->save();
+
+            // خصم الرصيد من المستخدم
+            $user->balance -= $request->amount;
+            $user->save();
+
+            // زيادة رصيد الصندوق
+            $periodicBox->balance += $request->amount;
+            $periodicBox->save();
+
+            // إنشاء المعاملة
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'donation',
+                'direction' => 'in',
+                'amount' => $request->amount,
+                'box_id' => $periodicBox->id,
+            ]);
+
+            $transaction->refresh();
+            DB::commit();
+
+            // نص الإشعار حسب التكرار
+            $recurrenceTextEn = match ($plan->recurrence->value)  {
+                'daily' => "This donation will be withdrawn daily from your wallet.",
+                'weekly' => "This donation will be withdrawn weekly from your wallet.",
+                'monthly' => "This donation will be withdrawn monthly from your wallet.",
+            };
+
+            $recurrenceTextAr = match ($plan->recurrence->value) {
+                'daily' => "سيتم سحب هذا التبرع يوميًا من محفظتك.",
+                'weekly' => "سيتم سحب هذا التبرع أسبوعيًا من محفظتك.",
+                'monthly' => "سيتم سحب هذا التبرع شهريًا من محفظتك.",
+            };
+
+            $bodyEn = $recurrenceTextEn . " You can stop it anytime if you wish.";
+            $bodyAr = $recurrenceTextAr . " يمكنك إيقافه في أي وقت إذا رغبت.";
+
+            // إرسال إشعار
+            $notificationService = app()->make(\App\Services\NotificationService::class);
+            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                'user_id' => $user->id,
+                'title_en' => 'Recurring Donation Activated',
+                'title_ar' => 'تفعيل التبرع الدوري',
+                'body_en' => $bodyEn,
+                'body_ar' => $bodyAr,
+            ]));
+
+            $recurrenceLabel = $plan->recurrence->label($locale);
+
+            return response()->json([
+                'message' => $locale === 'ar'
+                    ? 'تم تفعيل خطة التبرع العام بنجاح'
+                    : 'Periodic donation plan activated successfully',
+                'data' => [
+                    'id' => $plan->id,
+                    'amount' => $plan->amount,
+                    'recurrence' => $plan->recurrence,
+                    'recurrence_label' => $recurrenceLabel,
+                    'start_date' => $plan->start_date->format('Y-m-d'),
+                    'end_date' => $plan->end_date->format('Y-m-d'),
+                    'is_activated' => $plan->is_activated,
+                    'receipt_url' => $transaction?->pdf_url
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $locale === 'ar' ? 'فشل في تفعيل الخطة' : 'Failed to activate the plan',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
     // الغاء تفعيل
+    /*
     public function deactivateRecurring($planId)
     {
         $user = auth()->user();
@@ -653,8 +1073,71 @@ class PlanController extends Controller
         ]);
 
     }
+*/
+    public function deactivateRecurring($planId)
+    {
+        $user = auth()->user();
+        $locale = app()->getLocale();
+
+        $plan = Plan::where('id', $planId)
+            ->where('user_id', $user->id)
+            ->whereNull('sponsorship_id')
+            ->first();
+
+        if (!$plan || !$plan->is_activated) {
+            return response()->json([
+                'message' => $locale === 'ar'
+                    ? 'الخطة غير موجودة أو غير مفعلة'
+                    : 'Plan not found or not active',
+            ], 404);
+        }
+
+        // إيقاف الخطة
+        $plan->is_activated = false;
+        $plan->end_date = now();
+        $plan->save();
+
+        // تحديد نص الإشعار حسب التكرار
+        $recurrenceTextEn = match ($plan->recurrence->value)  {
+            'daily' => "Your daily recurring donation has been stopped.",
+            'weekly' => "Your weekly recurring donation has been stopped.",
+            'monthly' => "Your monthly recurring donation has been stopped.",
+            default => "Your recurring donation has been stopped."
+        };
+
+        $recurrenceTextAr = match ($plan->recurrence->value) {
+            'daily' => "تم إيقاف التبرع الدوري اليومي الخاص بك.",
+            'weekly' => "تم إيقاف التبرع الدوري الأسبوعي الخاص بك.",
+            'monthly' => "تم إيقاف التبرع الدوري الشهري الخاص بك.",
+            default => "تم إيقاف خطة التبرع الدوري الخاصة بك."
+        };
+
+        $bodyEn = $recurrenceTextEn . " You can reactivate it anytime if you wish.";
+        $bodyAr = $recurrenceTextAr . " يمكنك إعادة تفعيله في أي وقت إذا رغبت.";
+
+        // إرسال إشعار
+        $notificationService = app()->make(\App\Services\NotificationService::class);
+        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+            'user_id' => $user->id,
+            'title_en' => 'Recurring Donation Deactivated',
+            'title_ar' => 'إيقاف خطة التبرع الدوري',
+            'body_en' => $bodyEn,
+            'body_ar' => $bodyAr,
+        ]));
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم إيقاف خطة التبرع العام' : 'Periodic donation plan deactivated',
+            'data' => [
+                'id' => $plan->id,
+                'end_date' => $plan->end_date->format('Y-m-d'),
+                'is_activated' => $plan->is_activated,
+                'recurrence' => $plan->recurrence,
+            ],
+        ]);
+    }
 
     // اعادة تفعيل
+    /*
     public function reactivateRecurring($planId)
     {
         $user = auth()->user();
@@ -702,6 +1185,80 @@ class PlanController extends Controller
                 'recurrence_label' => $recurrenceLabel,
                 'start_date' => $plan->start_date->format('Y-m-d'),
                 'end_date' => $plan->end_date->format('Y-m-d'),
+                'is_activated' => $plan->is_activated,
+            ]
+        ]);
+    }
+    */
+    public function reactivateRecurring($planId)
+    {
+        $user = auth()->user();
+        $locale = app()->getLocale();
+
+        $plan = Plan::where('id', $planId)
+            ->where('user_id', $user->id)
+            ->whereNull('sponsorship_id')
+            ->where('is_activated', false)
+            ->first();
+
+        if (!$plan) {
+            return response()->json([
+                'message' => $locale === 'ar'
+                    ? 'الخطة غير موجودة أو مفعّلة بالفعل'
+                    : 'Plan not found or already active',
+            ], 404);
+        }
+
+        $now = now();
+        $plan->is_activated = true;
+        $plan->start_date = $now;
+
+        $recurrenceTextEn = '';
+        $recurrenceTextAr = '';
+
+        // ✅ Switch على Enum نفسه وليس على القيمة النصية
+        switch ($plan->recurrence) {
+            case RecurrenceType::Daily:
+                $plan->end_date = $now->copy()->addDay();
+                $recurrenceTextEn = "Your daily recurring donation has been reactivated.";
+                $recurrenceTextAr = "تم إعادة تفعيل التبرع الدوري اليومي الخاص بك.";
+                break;
+
+            case RecurrenceType::Weekly:
+                $plan->end_date = $now->copy()->addWeek();
+                $recurrenceTextEn = "Your weekly recurring donation has been reactivated.";
+                $recurrenceTextAr = "تم إعادة تفعيل التبرع الدوري الأسبوعي الخاص بك.";
+                break;
+
+            case RecurrenceType::Monthly:
+                $plan->end_date = $now->copy()->addMonth();
+                $recurrenceTextEn = "Your monthly recurring donation has been reactivated.";
+                $recurrenceTextAr = "تم إعادة تفعيل التبرع الدوري الشهري الخاص بك.";
+                break;
+        }
+
+        $recurrenceLabel = $plan->recurrence->label($locale);
+        $plan->save();
+
+        // إرسال إشعار
+        $notificationService = app()->make(\App\Services\NotificationService::class);
+        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+            'user_id' => $user->id,
+            'title_en' => 'Recurring Donation Reactivated',
+            'title_ar' => 'إعادة تفعيل خطة التبرع الدوري',
+            'body_en' => $recurrenceTextEn . " You can deactivate it anytime if you wish.",
+            'body_ar' => $recurrenceTextAr . " يمكنك إيقافه في أي وقت إذا رغبت.",
+        ]));
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم إعادة تفعيل خطة التبرع العام' : 'Periodic donation plan reactivated',
+            'data' => [
+                'id' => $plan->id,
+                'amount' => $plan->amount,
+                'recurrence' => $plan->recurrence->value,
+                'recurrence_label' => $recurrenceLabel,
+                'start_date' => $plan->start_date->format('Y-m-d H:i:s'),
+                'end_date' => $plan->end_date->format('Y-m-d H:i:s'),
                 'is_activated' => $plan->is_activated,
             ]
         ]);
@@ -787,8 +1344,6 @@ class PlanController extends Controller
         ]);
     }
 
-
-
     // جلب خطط التبرع الدوري للأدمن
     public function getRecurringPlansDonors()
     {
@@ -817,6 +1372,8 @@ class PlanController extends Controller
             })
         ]);
     }
+    //test
+
     public function checkPlanDates($planId)
     {
         $plan = \App\Models\Plan::find($planId);

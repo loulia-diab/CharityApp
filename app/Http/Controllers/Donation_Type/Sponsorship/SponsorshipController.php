@@ -8,12 +8,99 @@ use App\Models\Beneficiary;
 use App\Models\Campaigns\Campaign;
 use App\Models\Category;
 use App\Models\Sponsorship;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class SponsorshipController extends Controller
 {
     // Admin
+    /*
+        public function addSponsorship(Request $request)
+    {
+        $locale = app()->getLocale();
+
+        $request->validate([
+            'beneficiary_id' => 'required|exists:beneficiaries,id',
+            'category_id' => 'required|exists:categories,id',
+            'sponsorship_name_en' => 'required|string|max:255',
+            'sponsorship_name_ar' => 'required|string|max:255',
+            'description_en' => 'nullable|string',
+            'description_ar' => 'nullable|string',
+            'goal_amount' => 'numeric|nullable',
+            'is_permanent' => 'boolean|nullable',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'status' => ['nullable', Rule::in(CampaignStatus::values())],
+        ]);
+
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized'
+            ], 401);
+        }
+
+        $category = Category::where('id', $request->category_id)
+            ->where('main_category', 'Sponsorship')
+            ->first();
+
+        if (!$category) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'التصنيف غير صالح' : 'Invalid category'
+            ], 422);
+        }
+
+        try {
+            $campaign = Campaign::create([
+                'title_en' => $request->sponsorship_name_en,
+                'title_ar' => $request->sponsorship_name_ar,
+                'description_en' => $request->description_en ?? '',
+                'description_ar' => $request->description_ar ?? '',
+                'category_id' => $request->category_id,
+                'goal_amount' => $request->goal_amount ?? 0,
+                'collected_amount' => 0,
+                'status' => $request->status ?? CampaignStatus::Pending->value,
+                'image' => '',
+
+            ]);
+
+            if ($request->hasFile('image')) {
+                $imageFile = $request->file('image');
+                $ext = $imageFile->getClientOriginalExtension();
+                $imageName = 'sponsorship_' . $campaign->id . '.' . $ext;
+                $path = $imageFile->storeAs('sponsorship_images', $imageName, 'public');
+                $campaign->image = $path;
+                $campaign->save();
+            }
+
+            $sponsorship = Sponsorship::create([
+                'campaign_id' => $campaign->id,
+                'beneficiary_id' => $request->beneficiary_id,
+                'is_permanent' => $request->is_permanent ?? false,
+            ]);
+            $beneficiary = Beneficiary::find($request->beneficiary_id);
+            if ($beneficiary) {
+                $beneficiary->is_sorted = true;
+                $beneficiary->save();
+            }
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم إنشاء الكفالة والحملة بنجاح' : 'Sponsorship and campaign created successfully',
+                'data' => [
+                    'sponsorship' => $sponsorship->load('campaign', 'beneficiary'),
+                ],
+                'status' => 201
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إنشاء الكفالة' : 'Error creating sponsorship',
+                'error' => $e->getMessage(),
+                'status' => 500,
+            ], 500);
+        }
+    }
+     */
     public function addSponsorship(Request $request)
     {
         $locale = app()->getLocale();
@@ -80,6 +167,29 @@ class SponsorshipController extends Controller
             if ($beneficiary) {
                 $beneficiary->is_sorted = true;
                 $beneficiary->save();
+            }
+            // إرسال إشعار قبول الكفالة
+            $user = User::find($beneficiary->user_id);
+            if ($user) {
+                $notificationService = app()->make(\App\Services\NotificationService::class);
+
+                $title = [
+                    'en' => "Sponsorship Accepted",
+                    'ar' => "تم قبول استفادتك ككفالة",
+                ];
+
+                $body = [
+                    'en' => "Your sponsorship has been accepted under the campaign '{$campaign->title_en}'. You will be contacted for further coordination.",
+                    'ar' => "تم قبول كفالتك، سيتم التواصل معك لمزيد من التنسيق.",
+                ];
+
+                $notificationService->sendFcmNotification(new Request([
+                    'user_id' => $user->id,
+                    'title_en' => $title['en'],
+                    'title_ar' => $title['ar'],
+                    'body_en' => $body['en'],
+                    'body_ar' => $body['ar'],
+                ]));
             }
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إنشاء الكفالة والحملة بنجاح' : 'Sponsorship and campaign created successfully',
@@ -244,6 +354,67 @@ class SponsorshipController extends Controller
             ], 500);
         }
     }
+    /*
+    public function cancelledSponsorship(Request $request, $id)
+    {
+        $admin = auth('admin')->user();
+        $locale = app()->getLocale();
+
+        if (!$admin) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized',
+                'status' => 401
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'note' => 'required|string|max:1000'
+        ]);
+
+
+
+        try {
+            $sponsorship = Sponsorship::findOrFail($id);
+            $campaign = $sponsorship->campaign;
+
+            if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Sponsorship') {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'لا يمكن إلغاء كفالة غير تابعة لتصنيف Sponsorship' : 'Cannot cancel a sponsorship not under Sponsorship main category',
+                    'status' => 400
+                ], 400);
+            }
+
+            if ($sponsorship->is_permanent) {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'الكفالة ملغاة بالفعل بشكل دائم' : 'Sponsorship is already permanently cancelled',
+                    'status' => 400
+                ], 400);
+            }
+
+            $sponsorship->is_permanent = true;
+            $sponsorship->cancelled_note = $validated['note'] ?? null;
+            $sponsorship->cancelled_at = now();
+            $sponsorship->save();
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم إلغاء الكفالة بشكل دائم' : 'Sponsorship permanently cancelled',
+                'status' => 200,
+                'data' => $sponsorship->load('campaign', 'beneficiary')
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الكفالة غير موجودة' : 'Sponsorship not found',
+                'status' => 404
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إلغاء الكفالة' : 'Error cancelling sponsorship',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
+    */
     public function cancelledSponsorship(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -281,8 +452,34 @@ class SponsorshipController extends Controller
             $sponsorship->is_permanent = true;
             $sponsorship->cancelled_note = $validated['note'] ?? null;
             $sponsorship->cancelled_at = now();
-            $sponsorship->save();
 
+// إرسال إشعار للمستفيد
+            $beneficiary = $sponsorship->beneficiary;
+            if ($beneficiary) {
+                $user = User::find($beneficiary->user_id);
+                if ($user) {
+                    $notificationService = app()->make(\App\Services\NotificationService::class);
+
+                    $title = [
+                        'en' => "Sponsorship Cancelled",
+                        'ar' => "تم إلغاء كفالتك",
+                    ];
+
+                    $body = [
+                        'en' => "Your sponsorship has been permanently cancelled. Note: {$validated['note']}",
+                        'ar' => "تم إلغاء كفالتك  بشكل دائم. السبب: {$validated['note']}",
+                    ];
+
+                    $notificationService->sendFcmNotification(new Request([
+                        'user_id' => $user->id,
+                        'title_en' => $title['en'],
+                        'title_ar' => $title['ar'],
+                        'body_en' => $body['en'],
+                        'body_ar' => $body['ar'],
+                    ]));
+                }
+            }
+            $sponsorship->save();
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إلغاء الكفالة بشكل دائم' : 'Sponsorship permanently cancelled',
                 'status' => 200,
@@ -359,6 +556,7 @@ class SponsorshipController extends Controller
             ], 500);
         }
     }
+    /*
     public function getAllSponsorshipsByCreationDate()
     {
         $locale = app()->getLocale();
@@ -394,6 +592,46 @@ class SponsorshipController extends Controller
             'status' => 200
         ]);
     }
+    */
+    // عدلت كرمال ترجع d الحملة
+    public function getAllSponsorshipsByCreationDate()
+    {
+        $locale = app()->getLocale();
+
+        $sponsorships = Sponsorship::whereHas('campaign.category', function ($q) {
+            $q->where('main_category', 'Sponsorship');
+        })
+            ->with(['campaign', 'beneficiary.beneficiary_request'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $data = $sponsorships->map(function ($sponsorship) use ($locale) {
+            $campaign = $sponsorship->campaign;
+            $beneficiary = $sponsorship->beneficiary;
+            $request = $beneficiary?->beneficiary_request;
+
+            return [
+                'id' => $sponsorship->id,
+                'campaign_id' => $campaign->id,
+                'sponsorship_name' => $locale === 'ar' ? $campaign->title_ar : $campaign->title_en,
+                'image' => $campaign->image ? asset('storage/' . $campaign->image) : null,
+                'description' => $beneficiary->description ?? null,
+                'goal_amount' => $campaign->goal_amount,
+                'collected_amount' => $campaign->collected_amount,
+                'remaining_amount' => $campaign->goal_amount - $campaign->collected_amount,
+                'beneficiary_id' => $beneficiary->id ?? null,
+                'beneficiary_name' => $request?->{"name_{$locale}"} ?? null,
+                'created_at' => $sponsorship->created_at,
+            ];
+        });
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم جلب الكفالات بنجاح' : 'Sponsorships fetched successfully',
+            'data' => $data,
+            'status' => 200
+        ]);
+    }
+
     public function getSponsorshipDetails($id)
     {
         $locale = app()->getLocale();
@@ -443,7 +681,7 @@ class SponsorshipController extends Controller
             ], 500);
         }
     }
-    public function getSponsorshipsByStatus($categoryId, $status)
+    public function getSponsorShipsByStatus($categoryId, $status)
     {
         $admin = auth('admin')->user();
         $locale = app()->getLocale();

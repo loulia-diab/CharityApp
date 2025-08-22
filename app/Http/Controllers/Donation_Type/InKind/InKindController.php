@@ -8,6 +8,7 @@ use App\Models\Campaigns\Campaign;
 use App\Models\Category;
 use App\Models\InKind;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -236,8 +237,32 @@ class InKindController extends Controller
                 'direction'   => 'in',
                 'amount'      => 0,
             ]);
+            // إرسال إشعار للمستخدم
+            $user = User::find($inKind->user_id);
+            if ($user) {
+                $notificationService = app()->make(\App\Services\NotificationService::class);
+
+                $title = [
+                    'en' => "In-Kind Donation Accepted",
+                    'ar' => "تم قبول التبرع العيني",
+                ];
+
+                $body = [
+                    'en' => "Your in-kind donation request has been accepted. We will contact you to collect it from your address.",
+                    'ar' => "تم قبول طلب التبرع العيني الخاص بك، وسيتم التواصل معك لاستلامه من عنوانك.",
+                ];
+
+                $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                    'user_id' => $user->id,
+                    'title_en' => $title['en'],
+                    'title_ar' => $title['ar'],
+                    'body_en' => $body['en'],
+                    'body_ar' => $body['ar'],
+                ]));
+            }
 
             DB::commit();
+
             return response()->json([
                 'message' => $locale === 'ar'
                     ? 'تم قبول التبرع العيني وتحديث حالة الحملة'

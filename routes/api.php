@@ -20,6 +20,7 @@ use App\Http\Controllers\GiftController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\MessageController;
 
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 
 use App\Http\Controllers\MoneyController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\user\UserAuthController;
 use App\Http\Controllers\user\UserController;
 use App\Http\Controllers\volunteer\VolunteerController;
 use App\Http\Controllers\volunteer\VolunteerRequestController;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -201,14 +203,17 @@ Route::prefix('inKinds')->group(function () {
 Route::get('/beneficiary/getAllBenefits', [BeneficiaryController::class, 'getBeneficiaryActivities']);
 // المستفيدين المفروزين معلومات
 Route::get('/beneficiary/getSorted', [BeneficiaryController::class, 'getSortedBeneficiariesActivities']);
+// تفاصيل المستفيدين المفروزين
+Route::get('/beneficiary/getSorted/{beneficiaryId}', [BeneficiaryController::class, 'getSortedBeneficiaryDetails']);
 // تطوعاتي
 Route::get('/volunteer/getAll', [VolunteerController::class, 'getVolunteerCampaigns']);
 // معلومات المتطوعين بشو تتطوعوا للادمن
 Route::get('/volunteers/{id}', [VolunteerController::class, 'getVolunteerById']);
 
+
 // الدوري (كفالة)
 Route::prefix('plans')->group(function () {
-    Route::get('/{planId}/check-dates', [PlanController::class, 'checkPlanDates']);
+   // Route::get('/{planId}/check-dates', [PlanController::class, 'checkPlanDates']);
 
     Route::post('/create/forSponsorship/{sponsorshipId}', [PlanController::class,'createAndActivatePlanForSponsorship']);
     Route::post('/deactivate/{planId}', [PlanController::class, 'deactivatePlan']);
@@ -229,9 +234,15 @@ Route::prefix('plans')->group(function () {
 // التقارير
 Route::prefix('reports')->group(function () {
         Route::post('/addReport', [ReportController::class, 'addReport']);
+        // تقاريري
         Route::get('/getUserReports', [ReportController::class, 'getUserReports']);
+        // عرض للادمن
     Route::get('/getAdminReports', [ReportController::class, 'getAdminReports']);
     });
+//اشعاراتي
+    Route::get('/getAllNotifications', [NotificationController::class, 'getAllNotifications']);
+    //
+
 
 });
 
@@ -262,5 +273,9 @@ Route::prefix('sponsorships')->group(function () {
     Route::get('/{mainCategory}/category/{categoryId}', [SponsorshipController::class, 'getVisibleSponsorshipsByCategoryForUsers']);
 
 });
-
+// test
+    Route::post('/send-notification', function(Request $request){
+        $service = new NotificationService();
+        return $service->sendFcmNotification($request);
+    });
 });

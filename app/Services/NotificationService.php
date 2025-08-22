@@ -12,11 +12,27 @@ use Illuminate\Http\Request;
 use App\Models\Notification;
 class NotificationService
 {
-
+/*
     public function index()
     {
         return auth()->user()->notifications;
     }
+*/
+    public function index()
+    {
+        $locale = app()->getLocale();
+
+        return auth()->user()->notifications->map(function ($notification) use ($locale) {
+            return [
+                'id'         => $notification->id,
+                'title'      => $locale === 'ar' ? $notification->title_ar : $notification->title_en,
+                'body'       => $locale === 'ar' ? $notification->body_ar  : $notification->body_en,
+                'created_at' => $notification->created_at->format('Y-m-d H:i'),
+            ];
+        });
+    }
+
+
 
     public function sendFcmNotification(Request $request)
     {
@@ -44,7 +60,7 @@ class NotificationService
         }
 
         // Firebase credentials
-        $credentialsFilePath = Storage::path('app/firebase/boffee-7fa4c-firebase-adminsdk-xp4k4-5bf998dd8d.json');
+        $credentialsFilePath = storage_path('app/firebase/chairty-app-3dd34-firebase-adminsdk-fbsvc-2746f9ae5b.json');
         $client = new GoogleClient();
         $client->setAuthConfig($credentialsFilePath);
         $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
@@ -64,7 +80,7 @@ class NotificationService
             ];
 
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/boffee-7fa4c/messages:send");
+            curl_setopt($ch, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/charity-app-12345/messages:send");
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);

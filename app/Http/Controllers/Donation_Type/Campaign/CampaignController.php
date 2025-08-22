@@ -764,6 +764,69 @@ class CampaignController extends Controller
             ]);
         }
     }
+/*
+    public function getAllVisibleCampaignsForUser($mainCategory)
+    {
+        try {
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+
+            // جلب الحملات Active أو Complete (لأن بعض Active ممكن تتحول Complete عند fetch)
+            $campaigns = Campaign::whereHas('category', function ($q) use ($mainCategory) {
+                $q->where('main_category', $mainCategory);
+            })
+                ->select(
+                    'id',
+                    'category_id',
+                    "$titleField as title",
+                    "$descField as description",
+                    'image',
+                    'goal_amount',
+                    'collected_amount',
+                    'status',
+                    'end_date',
+                    'completed_at'
+                )
+                ->get()
+                ->map(function ($campaign) {
+
+                    // تحديث الحالة تلقائياً قبل عرضها
+                    $today = now()->toDateString();
+
+                    if ($campaign->status === 'active' &&
+                        ($campaign->collected_amount >= $campaign->goal_amount ||
+                            ($campaign->end_date && $campaign->end_date->toDateString() <= $today))
+                    ) {
+                        $campaign->status = 'complete';
+                        if (!$campaign->completed_at) {
+                            $campaign->completed_at = now();
+                        }
+                        $campaign->saveQuietly(); // تحديث الـ DB بدون loop
+                    }
+
+                    // حساب المبلغ المتبقي
+                    $campaign->remaining_amount = max(0, $campaign->goal_amount - $campaign->collected_amount);
+
+                    return $campaign;
+                });
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب الحملات بنجاح' : 'Campaigns fetched successfully',
+                'data' => $campaigns,
+                'status' => 200
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحملات' : 'Error fetching campaigns',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
+*/
+
     public function getVisibleCampaignByIdForUser($mainCategory='Campaign',$id)
     {
         try {
@@ -928,7 +991,7 @@ class CampaignController extends Controller
 
             $campaigns->transform(function ($campaign) use ($locale) {
                 $campaign->status_label = $campaign->status?->label($locale) ?? '';
-                $campaign->created_at_formatted = \Carbon\Carbon::parse($campaign->created_at)->translatedFormat('d F Y');
+               $campaign->created_at_formatted = \Carbon\Carbon::parse($campaign->created_at)->translatedFormat('d F Y');
                 return $campaign;
             });
 

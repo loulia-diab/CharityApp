@@ -16,7 +16,8 @@ class NotificationController extends Controller
     }
 
     // عرض جميع إشعارات المستخدم
-    public function index()
+    public function getAllNotifications()
+
     {
         return response()->json($this->notificationService->index());
     }

@@ -332,17 +332,17 @@ class VolunteerRequestController extends Controller
 
             if ($validated['status'] === 'accepted') {
                 $title = [
-                    'en' => 'Your request has been accepted',
-                    'ar' => 'تم قبول طلبك',
+                    'en' => 'Your volunteer request has been accepted',
+                    'ar' => 'تم قبول طلب تطوعك',
                 ];
                 $body = [
-                    'en' => 'Congratulations! Your request is now approved.',
-                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت متطوعًا.',
+                    'en' => 'Congratulations! Your request is now approved, We will call you as soon as possible.',
+                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت متطوعًا، انتظر منا مكالمة قريبة!',
                 ];
             } else {
                 $title = [
-                    'en' => 'Your request has been rejected',
-                    'ar' => 'تم رفض طلبك',
+                    'en' => 'Your volunteer request has been rejected',
+                    'ar' => 'تم رفض طلب تطوعك',
                 ];
                 $body = [
                     'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_en'],

@@ -37,5 +37,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             VolunteerRequestSeeder::class,
             VolunteerSeeder::class,]);
+        $this->call(InKindSeeder::class);
     }
+
 }

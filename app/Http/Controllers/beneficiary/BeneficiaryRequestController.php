@@ -324,17 +324,17 @@ class BeneficiaryRequestController extends Controller
         if ($user) {
             if ($status === 'accepted') {
                 $title = [
-                    'en' => 'Your request has been accepted',
-                    'ar' => 'تم قبول طلبك',
+                    'en' => 'Your benefit request has been accepted',
+                    'ar' => 'تم قبول طلب استفادتك',
                 ];
                 $body = [
-                    'en' => 'Congratulations! Your request is now approved.',
-                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت مستفيدًا.',
+                    'en' => 'Congratulations! Your request is now approved, We will call you as soon as possible.',
+                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت مستفيدًا، انتظر منا مكالمة قريبة',
                 ];
             } else {
                 $title = [
-                    'en' => 'Your request has been rejected',
-                    'ar' => 'تم رفض طلبك',
+                    'en' => 'Your benefit request has been rejected',
+                    'ar' => 'تم رفض طلب استفادتك',
                 ];
                 $body = [
                     'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_of_rejection_en'],

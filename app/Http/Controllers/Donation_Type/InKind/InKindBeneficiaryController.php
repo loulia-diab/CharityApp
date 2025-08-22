@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 class InKindBeneficiaryController extends Controller
 {
     // اضافة مستفيدين
+    /*
     public function addBeneficiariesToInKind(Request $request, $inKindId) {
         $admin = auth('admin')->user();
         if (!$admin) {
@@ -46,6 +47,70 @@ class InKindBeneficiaryController extends Controller
         ]);
 
     }
+*/
+    public function addBeneficiariesToInKind(Request $request, $inKindId) {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => 'Unauthorized - Admin access only',
+            ], 401);
+        }
+
+        $request->validate([
+            'beneficiary_ids' => 'required|array|min:1',
+            'beneficiary_ids.*' => 'exists:beneficiaries,id',
+        ]);
+
+        $inKind = InKind::find($inKindId);
+
+        if (!$inKind) {
+            return response()->json([
+                'message' => 'In-kind donation not found',
+            ], 404);
+        }
+
+        $inKind->beneficiaries()->syncWithoutDetaching($request->beneficiary_ids);
+
+        // تحديث is_sorted لكل المستفيدين المضافين
+        Beneficiary::whereIn('id', $request->beneficiary_ids)
+            ->update(['is_sorted' => true]);
+
+        // جلب المستفيدين بعد التحديث
+        $inKind->load('beneficiaries');
+
+        //  إرسال إشعار لكل مستفيد تمت إضافته
+        foreach ($inKind->beneficiaries as $beneficiary) {
+            if (in_array($beneficiary->id, $request->beneficiary_ids)) {
+                $notificationService = app()->make(\App\Services\NotificationService::class);
+
+                $title = [
+                    'en' => "New In-Kind Donation Assigned",
+                    'ar' => "تم تخصيص تبرع عيني جديد لك",
+                ];
+
+                $body = [
+                    'en' => "You have been added as a beneficiary to an in-kind donation.",
+                    'ar' => "تمت إضافتك كمستفيد من تبرع عيني.",
+                ];
+
+                $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                    'user_id'  => $beneficiary->user_id, // حسب علاقتك بالمستفيد
+                    'title_en' => $title['en'],
+                    'title_ar' => $title['ar'],
+                    'body_en'  => $body['en'],
+                    'body_ar'  => $body['ar'],
+                    'type'     => 'in_kind',
+                    'item_id'  => $inKind->id,
+                ]));
+
+            }
+        }
+
+        return response()->json([
+            'message' => 'Beneficiaries added to in-kind donation successfully',
+            'data' => $inKind->beneficiaries,
+        ]);
+    }
 
     // جلب مستفيدين تبرع عيني لحالو
     public function getInKindBeneficiaries($inKindId) {
@@ -56,7 +121,9 @@ class InKindBeneficiaryController extends Controller
             ], 401);
         }
 
-        $inKind = InKind::with('beneficiaries')->find($inKindId);
+        $locale = app()->getLocale(); // الحصول على لغة التطبيق
+
+        $inKind = InKind::with('beneficiaries.beneficiary_request')->find($inKindId);
 
         if (!$inKind) {
             return response()->json([
@@ -66,17 +133,18 @@ class InKindBeneficiaryController extends Controller
 
         return response()->json([
             'message' => 'Beneficiaries retrieved successfully',
-            'data' => $inKind->beneficiaries->map(function ($beneficiary) {
+            'data' => $inKind->beneficiaries->map(function ($beneficiary) use ($locale) {
                 return [
                     'id' => $beneficiary->id,
-                    'name' => $beneficiary->beneficiary_request->name,
-                    // أضف الحقول التي تحتاجها مثل العمر، الجنس، وغيرها
+                    'name' => $beneficiary->beneficiary_request?->{"name_{$locale}"} ?? null,
+                    // إذا بدك تضيف العمر أو الجنس أو أي حقل آخر من المستفيد:
                     // 'age' => $beneficiary->age,
                     // 'gender' => $beneficiary->gender,
                 ];
             }),
         ]);
     }
+
 
 
     // غير مستخدمة

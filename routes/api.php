@@ -245,7 +245,7 @@ Route::prefix('reports')->group(function () {
 //اشعاراتي
     Route::get('/getAllNotifications', [NotificationController::class, 'getAllNotifications']);
     // تسجيل الجهاز من أجل الاشعارات
-    Route::post('/register-device', [DeviceController::class, 'registerDevice']);
+    Route::post('/registerDevice', [DeviceController::class, 'registerDevice']);
 
 });
 

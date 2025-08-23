@@ -40,7 +40,7 @@ class CampaignSeeder extends Seeder
                     'end_date' => '2026-06-15',
                     'status' => CampaignStatus::Active->value,
                     'created_at' => Carbon::now(),
-                    'image' => "campaign_images/construction2.jpg"
+                    'image' => "campaign_images/construcrtion2.jpg"
                 ],
                 [
                     'title_en' => 'House of Mercy for Orphans',
@@ -54,7 +54,7 @@ class CampaignSeeder extends Seeder
                     'end_date' => '2025-10-01',
                     'status' => CampaignStatus::Archived->value,
                     'created_at' => Carbon::now(),
-                    'image' => "campaign_images/construction3.jpg"
+                    'image' => "campaign_images/construcrtion3.jpg"
                 ],
 
                 [

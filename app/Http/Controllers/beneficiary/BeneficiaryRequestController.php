@@ -261,6 +261,7 @@ class BeneficiaryRequestController extends Controller
 
     public function updateBeneficiaryRequestStatus(Request $request, $id)
     {
+        try {
         $admin = auth()->guard('admin')->user();
         if (!$admin) {
             return response()->json(['message' => 'Unauthorized'], 401);
@@ -318,7 +319,7 @@ class BeneficiaryRequestController extends Controller
                 $response['beneficiary_id'] = $beneficiary->id;
             }
         }
-
+/*
         //  إرسال إشعار للمستخدم
         $user = User::find($requestData->user_id);
         if ($user) {
@@ -350,8 +351,29 @@ class BeneficiaryRequestController extends Controller
                 'body_ar' => $body['ar'],
             ]));
         }
-
+*/
         return response()->json([$response]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // أخطاء التحقق من المدخلات
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // إذا لم يتم العثور على الطلب
+            return response()->json([
+                'message' => 'Request not found',
+            ], 404);
+
+        } catch (\Exception $e) {
+            // أي خطأ آخر غير متوقع
+            return response()->json([
+                'message' => 'An error occurred',
+                'error' => $e->getMessage()
+            ], 500);
+        }
 
     }
 

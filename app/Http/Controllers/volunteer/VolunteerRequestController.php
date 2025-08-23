@@ -323,6 +323,7 @@ class VolunteerRequestController extends Controller
             ]);
             $response['volunteer_id'] = $volunteer->id;
         }
+        /*
         // إرسال إشعار للمستخدم
         $user = User::find($volunteerRequest->user_id); // صحّحت $requestData إلى $volunteerRequest
         if ($user) {
@@ -359,10 +360,7 @@ class VolunteerRequestController extends Controller
                 'body_ar' => $body['ar'],
             ]));
         }
-        /*
-        return response()->json(['message' => 'Status updated successfully',
-            'Volunteer_id'=> $Volunteer->id
-            ]);
+
 */
        return response()->json([$response]);
 

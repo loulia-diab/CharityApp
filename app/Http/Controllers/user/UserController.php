@@ -209,6 +209,7 @@ class UserController extends Controller
                             'image'       => $transaction->campaign->image,
                             'amount'      => $transaction->amount,
                             'date'        => $transaction->created_at->toDateTimeString(),
+                            'pdf_url'     => $transaction->pdf_url ?? null,
                         ];
                     } elseif ($transaction->box) {
                         return [
@@ -216,6 +217,7 @@ class UserController extends Controller
                             'image'       => $transaction->box->image,
                             'amount'      => $transaction->amount,
                             'date'        => $transaction->created_at->toDateTimeString(),
+                            'pdf_url'     => $transaction->pdf_url ?? null,
                         ];
                     }
                     return null;

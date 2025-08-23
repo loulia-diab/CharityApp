@@ -57,13 +57,24 @@ class Campaign extends Model
         $locale = app()->getLocale();
 
         // لو status null رح يكسر، فحط حماية:
-        return $this->status?->label($locale) ;
+        return $this->status->label($locale) ;
     }
-
-
+/*
     protected $casts = [
+        'goal_amount' => 'float',
+        'collected_amount' => 'float',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'status' => CampaignStatus::class,
+        'completed_at' => 'datetime',
+    ];
+    */
+    protected $casts = [
+        'goal_amount' => 'float',
+        'collected_amount' => 'float',
         'status' => CampaignStatus::class,
     ];
+
     public function category()
     {
         return $this->belongsTo(Category::class);

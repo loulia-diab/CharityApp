@@ -307,10 +307,6 @@ class PlanController extends Controller
 
         // تحقق من وجود الكفالة
         $sponsorship = Sponsorship::findOrFail($sponsorshipId);
-        if(!$sponsorship)
-            return response()->json([
-                'message' => $locale === 'ar' ? 'الكفالة غير موجودة.' : 'Sponsorship is not existed.'
-            ],500);
 
         // تحقق من صحة المبلغ
         $request->validate([
@@ -318,7 +314,6 @@ class PlanController extends Controller
         ]);
 
         $amountToPay = $request->input('amount');
-
         $campaign = $sponsorship->campaign;
 
         if ($campaign->status === 'complete' || $campaign->collected_amount >= $campaign->goal_amount) {
@@ -368,7 +363,7 @@ class PlanController extends Controller
             $user->balance -= $amountToPay;
             $user->save();
 
-            // إنشاء معاملة ترانزاكشن (donation / in)
+            // إنشاء معاملة
             $transaction = Transaction::create([
                 'user_id' => $user->id,
                 'amount' => $amountToPay,
@@ -376,7 +371,6 @@ class PlanController extends Controller
                 'direction' => 'in',
                 'campaign_id' => $campaign->id,
             ]);
-            $transaction->refresh();
 
             // تحديث مبلغ الحملة المجموع
             $campaign->collected_amount += $amountToPay;
@@ -387,26 +381,29 @@ class PlanController extends Controller
             $campaign->save();
 
             DB::commit();
-// إرسال إشعار للمستخدم بخطة الكفالة الدورية
-            $notificationService = app()->make(\App\Services\NotificationService::class);
 
-            $title = [
-                'en' => "Sponsorship Plan Activated",
-                'ar' => "تم تفعيل خطة الكفالة",
-            ];
+            // إرسال إشعار آمن
+            try {
+                $notificationService = app()->make(\App\Services\NotificationService::class);
+                $title = [
+                    'en' => "Sponsorship Plan Activated",
+                    'ar' => "تم تفعيل خطة الكفالة",
+                ];
+                $body = [
+                    'en' => "Your monthly sponsorship plan has been activated. The donation will be withdrawn from your wallet every month unless you cancel.",
+                    'ar' => "تم تفعيل خطة الكفالة الشهرية الخاصة بك. سيتم خصم التبرع من محفظتك شهريًا إلا إذا قمت بالإلغاء.",
+                ];
+                $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                    'user_id' => $user->id,
+                    'title_en' => $title['en'],
+                    'title_ar' => $title['ar'],
+                    'body_en' => $body['en'],
+                    'body_ar' => $body['ar'],
+                ]));
+            } catch (\Exception $e) {
+                \Log::error("Failed to send sponsorship notification: " . $e->getMessage());
+            }
 
-            $body = [
-                'en' => "Your monthly sponsorship plan has been activated. The donation will be withdrawn from your wallet every month unless you cancel.",
-                'ar' => "تم تفعيل خطة الكفالة الشهرية الخاصة بك . سيتم خصم التبرع من محفظتك شهريًا إلا إذا قمت بالإلغاء.",
-            ];
-
-            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
-                'user_id' => $user->id,
-                'title_en' => $title['en'],
-                'title_ar' => $title['ar'],
-                'body_en' => $body['en'],
-                'body_ar' => $body['ar'],
-            ]));
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إنشاء وتفعيل خطة الكفالة بنجاح' : 'Sponsorship plan created and activated successfully',
                 'data' => [
@@ -449,6 +446,7 @@ class PlanController extends Controller
             ], 500);
         }
     }
+
     // إيقاف خطة الكفالة
     /*
     public function deactivatePlan($planId)
@@ -523,26 +521,30 @@ class PlanController extends Controller
 
         $campaign = $plan->sponsorship->campaign;
 
-        // إرسال إشعار للمستخدم
-        $notificationService = app()->make(\App\Services\NotificationService::class);
+        // إرسال إشعار آمن
+        try {
+            $notificationService = app()->make(\App\Services\NotificationService::class);
 
-        $title = [
-            'en' => "Sponsorship Plan Deactivated",
-            'ar' => "تم إيقاف خطة الكفالة",
-        ];
+            $title = [
+                'en' => "Sponsorship Plan Deactivated",
+                'ar' => "تم إيقاف خطة الكفالة",
+            ];
 
-        $body = [
-            'en' => "Your sponsorship plan for '{$campaign->title_en}' has been deactivated. You can reactivate it anytime if you wish.",
-            'ar' => "تم إيقاف خطة الكفالة الخاصة بك '{$campaign->title_ar}'، يمكنك إعادة تفعيلها إذا رغبت.",
-        ];
+            $body = [
+                'en' => "Your sponsorship plan for '{$campaign->title_en}' has been deactivated. You can reactivate it anytime if you wish.",
+                'ar' => "تم إيقاف خطة الكفالة الخاصة بك '{$campaign->title_ar}'، يمكنك إعادة تفعيلها إذا رغبت.",
+            ];
 
-        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
-            'user_id' => $user->id,
-            'title_en' => $title['en'],
-            'title_ar' => $title['ar'],
-            'body_en' => $body['en'],
-            'body_ar' => $body['ar'],
-        ]));
+            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                'user_id' => $user->id,
+                'title_en' => $title['en'],
+                'title_ar' => $title['ar'],
+                'body_en' => $body['en'],
+                'body_ar' => $body['ar'],
+            ]));
+        } catch (\Exception $e) {
+            \Log::error("Failed to send sponsorship deactivation notification: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم إيقاف الخطة بنجاح' : 'Plan deactivated successfully',
@@ -563,6 +565,7 @@ class PlanController extends Controller
             ]
         ]);
     }
+
 
     // إعادة تفعيل خطة كفالة
     /*
@@ -643,14 +646,12 @@ class PlanController extends Controller
 
         $campaign = $plan->sponsorship->campaign;
 
-        // لا يمكن إعادة تفعيل الخطة إذا كانت الكفالة مكتملة
         if ($campaign->status === 'complete') {
             return response()->json([
                 'message' => $locale === 'ar' ? 'الكفالة مكتملة ولا يمكن تفعيل الخطط.' : 'Sponsorship is completed, cannot reactivate plan.',
             ], 422);
         }
 
-        // إعادة التفعيل دون خصم رصيد جديد أو ترانزاكشن
         $now = now();
         $plan->update([
             'is_activated' => true,
@@ -658,18 +659,30 @@ class PlanController extends Controller
             'end_date' => $now->copy()->addMonth(),
         ]);
 
-        $notificationService = app()->make(\App\Services\NotificationService::class);
+        // إشعار آمن
+        try {
+            $notificationService = app()->make(\App\Services\NotificationService::class);
 
-        $bodyEn = "Your sponsorship plan for '{$campaign->title_en}' has been reactivated. You can stop it anytime if you wish.";
-        $bodyAr = "تم إعادة تفعيل خطة الكفالة الخاصة بك '{$campaign->title_ar}'، يمكنك إيقافها في أي وقت إذا رغبت.";
+            $title = [
+                'en' => 'Sponsorship Plan Reactivated',
+                'ar' => 'إعادة تفعيل خطة الكفالة',
+            ];
 
-        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
-            'user_id' => $user->id,
-            'title_en' => 'Sponsorship Plan Reactivated',
-            'title_ar' => 'إعادة تفعيل خطة الكفالة',
-            'body_en' => $bodyEn,
-            'body_ar' => $bodyAr,
-        ]));
+            $body = [
+                'en' => "Your sponsorship plan for '{$campaign->title_en}' has been reactivated. You can stop it anytime if you wish.",
+                'ar' => "تم إعادة تفعيل خطة الكفالة الخاصة بك '{$campaign->title_ar}'، يمكنك إيقافها في أي وقت إذا رغبت.",
+            ];
+
+            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                'user_id' => $user->id,
+                'title_en' => $title['en'],
+                'title_ar' => $title['ar'],
+                'body_en' => $body['en'],
+                'body_ar' => $body['ar'],
+            ]));
+        } catch (\Exception $e) {
+            \Log::error("Failed to send sponsorship reactivation notification: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم إعادة تفعيل الخطة بنجاح' : 'Plan reactivated successfully',
@@ -690,6 +703,7 @@ class PlanController extends Controller
             ]
         ]);
     }
+
 
     // كفالاتي ك متبرع
     public function getSponsorshipPlansForUser()
@@ -942,7 +956,6 @@ class PlanController extends Controller
                 ], 400);
             }
 
-            // إنشاء الخطة
             $plan = new Plan();
             $plan->user_id = $user->id;
             $plan->amount = $request->amount;
@@ -951,7 +964,6 @@ class PlanController extends Controller
             $plan->start_date = now();
             $plan->is_activated = true;
 
-            // تعيين end_date حسب التكرار
             switch ($request->recurrence) {
                 case 'daily':
                     $plan->end_date = now()->addDay();
@@ -966,15 +978,12 @@ class PlanController extends Controller
 
             $plan->save();
 
-            // خصم الرصيد من المستخدم
             $user->balance -= $request->amount;
             $user->save();
 
-            // زيادة رصيد الصندوق
             $periodicBox->balance += $request->amount;
             $periodicBox->save();
 
-            // إنشاء المعاملة
             $transaction = Transaction::create([
                 'user_id' => $user->id,
                 'type' => 'donation',
@@ -986,31 +995,34 @@ class PlanController extends Controller
             $transaction->refresh();
             DB::commit();
 
-            // نص الإشعار حسب التكرار
-            $recurrenceTextEn = match ($plan->recurrence->value)  {
-                'daily' => "This donation will be withdrawn daily from your wallet.",
-                'weekly' => "This donation will be withdrawn weekly from your wallet.",
-                'monthly' => "This donation will be withdrawn monthly from your wallet.",
-            };
+            // إشعار آمن
+            try {
+                $recurrenceTextEn = match ($plan->recurrence)  {
+                    'daily' => "This donation will be withdrawn daily from your wallet.",
+                    'weekly' => "This donation will be withdrawn weekly from your wallet.",
+                    'monthly' => "This donation will be withdrawn monthly from your wallet.",
+                };
 
-            $recurrenceTextAr = match ($plan->recurrence->value) {
-                'daily' => "سيتم سحب هذا التبرع يوميًا من محفظتك.",
-                'weekly' => "سيتم سحب هذا التبرع أسبوعيًا من محفظتك.",
-                'monthly' => "سيتم سحب هذا التبرع شهريًا من محفظتك.",
-            };
+                $recurrenceTextAr = match ($plan->recurrence) {
+                    'daily' => "سيتم سحب هذا التبرع يوميًا من محفظتك.",
+                    'weekly' => "سيتم سحب هذا التبرع أسبوعيًا من محفظتك.",
+                    'monthly' => "سيتم سحب هذا التبرع شهريًا من محفظتك.",
+                };
 
-            $bodyEn = $recurrenceTextEn . " You can stop it anytime if you wish.";
-            $bodyAr = $recurrenceTextAr . " يمكنك إيقافه في أي وقت إذا رغبت.";
+                $bodyEn = $recurrenceTextEn . " You can stop it anytime if you wish.";
+                $bodyAr = $recurrenceTextAr . " يمكنك إيقافه في أي وقت إذا رغبت.";
 
-            // إرسال إشعار
-            $notificationService = app()->make(\App\Services\NotificationService::class);
-            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
-                'user_id' => $user->id,
-                'title_en' => 'Recurring Donation Activated',
-                'title_ar' => 'تفعيل التبرع الدوري',
-                'body_en' => $bodyEn,
-                'body_ar' => $bodyAr,
-            ]));
+                $notificationService = app()->make(\App\Services\NotificationService::class);
+                $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                    'user_id' => $user->id,
+                    'title_en' => 'Recurring Donation Activated',
+                    'title_ar' => 'تفعيل التبرع الدوري',
+                    'body_en' => $bodyEn,
+                    'body_ar' => $bodyAr,
+                ]));
+            } catch (\Exception $e) {
+                \Log::error("Failed to send recurring donation notification: " . $e->getMessage());
+            }
 
             $recurrenceLabel = $plan->recurrence->label($locale);
 
@@ -1038,6 +1050,7 @@ class PlanController extends Controller
             ], 500);
         }
     }
+
 
     // الغاء تفعيل
     /*
@@ -1097,15 +1110,15 @@ class PlanController extends Controller
         $plan->end_date = now();
         $plan->save();
 
-        // تحديد نص الإشعار حسب التكرار
-        $recurrenceTextEn = match ($plan->recurrence->value)  {
+        // نص الإشعار حسب التكرار
+        $recurrenceTextEn = match ($plan->recurrence)  {
             'daily' => "Your daily recurring donation has been stopped.",
             'weekly' => "Your weekly recurring donation has been stopped.",
             'monthly' => "Your monthly recurring donation has been stopped.",
             default => "Your recurring donation has been stopped."
         };
 
-        $recurrenceTextAr = match ($plan->recurrence->value) {
+        $recurrenceTextAr = match ($plan->recurrence) {
             'daily' => "تم إيقاف التبرع الدوري اليومي الخاص بك.",
             'weekly' => "تم إيقاف التبرع الدوري الأسبوعي الخاص بك.",
             'monthly' => "تم إيقاف التبرع الدوري الشهري الخاص بك.",
@@ -1115,15 +1128,19 @@ class PlanController extends Controller
         $bodyEn = $recurrenceTextEn . " You can reactivate it anytime if you wish.";
         $bodyAr = $recurrenceTextAr . " يمكنك إعادة تفعيله في أي وقت إذا رغبت.";
 
-        // إرسال إشعار
-        $notificationService = app()->make(\App\Services\NotificationService::class);
-        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
-            'user_id' => $user->id,
-            'title_en' => 'Recurring Donation Deactivated',
-            'title_ar' => 'إيقاف خطة التبرع الدوري',
-            'body_en' => $bodyEn,
-            'body_ar' => $bodyAr,
-        ]));
+        // إرسال إشعار آمن
+        try {
+            $notificationService = app()->make(\App\Services\NotificationService::class);
+            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                'user_id' => $user->id,
+                'title_en' => 'Recurring Donation Deactivated',
+                'title_ar' => 'إيقاف خطة التبرع الدوري',
+                'body_en' => $bodyEn,
+                'body_ar' => $bodyAr,
+            ]));
+        } catch (\Exception $e) {
+            \Log::error("Failed to send recurring donation deactivation notification: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم إيقاف خطة التبرع العام' : 'Periodic donation plan deactivated',
@@ -1135,6 +1152,7 @@ class PlanController extends Controller
             ],
         ]);
     }
+
 
     // اعادة تفعيل
     /*
@@ -1216,7 +1234,7 @@ class PlanController extends Controller
         $recurrenceTextEn = '';
         $recurrenceTextAr = '';
 
-        // ✅ Switch على Enum نفسه وليس على القيمة النصية
+        // تحديد end_date ونص الإشعار حسب التكرار
         switch ($plan->recurrence) {
             case RecurrenceType::Daily:
                 $plan->end_date = $now->copy()->addDay();
@@ -1240,15 +1258,19 @@ class PlanController extends Controller
         $recurrenceLabel = $plan->recurrence->label($locale);
         $plan->save();
 
-        // إرسال إشعار
-        $notificationService = app()->make(\App\Services\NotificationService::class);
-        $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
-            'user_id' => $user->id,
-            'title_en' => 'Recurring Donation Reactivated',
-            'title_ar' => 'إعادة تفعيل خطة التبرع الدوري',
-            'body_en' => $recurrenceTextEn . " You can deactivate it anytime if you wish.",
-            'body_ar' => $recurrenceTextAr . " يمكنك إيقافه في أي وقت إذا رغبت.",
-        ]));
+        // إرسال إشعار آمن
+        try {
+            $notificationService = app()->make(\App\Services\NotificationService::class);
+            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                'user_id' => $user->id,
+                'title_en' => 'Recurring Donation Reactivated',
+                'title_ar' => 'إعادة تفعيل خطة التبرع الدوري',
+                'body_en' => $recurrenceTextEn . " You can deactivate it anytime if you wish.",
+                'body_ar' => $recurrenceTextAr . " يمكنك إيقافه في أي وقت إذا رغبت.",
+            ]));
+        } catch (\Exception $e) {
+            \Log::error("Failed to send recurring donation reactivation notification: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => $locale === 'ar' ? 'تم إعادة تفعيل خطة التبرع العام' : 'Periodic donation plan reactivated',
@@ -1263,6 +1285,7 @@ class PlanController extends Controller
             ]
         ]);
     }
+
 
 
     // تبرعي الدوري

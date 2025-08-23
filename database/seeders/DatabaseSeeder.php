@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 
+use App\Models\InKind;
 use Illuminate\Database\Seeder;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -37,7 +38,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             VolunteerRequestSeeder::class,
             VolunteerSeeder::class,]);
-        $this->call(InKindSeeder::class);
+        $this->call([InKindSeeder::class,]);
     }
-
 }

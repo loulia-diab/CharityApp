@@ -136,6 +136,8 @@ class SponsorshipController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+
             $campaign = Campaign::create([
                 'title_en' => $request->sponsorship_name_en,
                 'title_ar' => $request->sponsorship_name_ar,
@@ -146,7 +148,6 @@ class SponsorshipController extends Controller
                 'collected_amount' => 0,
                 'status' => $request->status ?? CampaignStatus::Pending->value,
                 'image' => '',
-
             ]);
 
             if ($request->hasFile('image')) {
@@ -163,12 +164,26 @@ class SponsorshipController extends Controller
                 'beneficiary_id' => $request->beneficiary_id,
                 'is_permanent' => $request->is_permanent ?? false,
             ]);
+
             $beneficiary = Beneficiary::find($request->beneficiary_id);
             if ($beneficiary) {
                 $beneficiary->is_sorted = true;
                 $beneficiary->save();
             }
-            // إرسال إشعار قبول الكفالة
+
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إنشاء الكفالة' : 'Error creating sponsorship',
+                'error' => $e->getMessage(),
+                'status' => 500,
+            ], 500);
+        }
+
+        // 🔹 إرسال الإشعار خارج الترانزاكشن
+        try {
             $user = User::find($beneficiary->user_id);
             if ($user) {
                 $notificationService = app()->make(\App\Services\NotificationService::class);
@@ -191,22 +206,19 @@ class SponsorshipController extends Controller
                     'body_ar' => $body['ar'],
                 ]));
             }
-            return response()->json([
-                'message' => $locale === 'ar' ? 'تم إنشاء الكفالة والحملة بنجاح' : 'Sponsorship and campaign created successfully',
-                'data' => [
-                    'sponsorship' => $sponsorship->load('campaign', 'beneficiary'),
-                ],
-                'status' => 201
-            ], 201);
-
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إنشاء الكفالة' : 'Error creating sponsorship',
-                'error' => $e->getMessage(),
-                'status' => 500,
-            ], 500);
+            \Log::error("Failed to send sponsorship notification: " . $e->getMessage());
         }
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم إنشاء الكفالة والحملة بنجاح' : 'Sponsorship and campaign created successfully',
+            'data' => [
+                'sponsorship' => $sponsorship->load('campaign', 'beneficiary'),
+            ],
+            'status' => 201
+        ], 201);
     }
+
     public function updateSponsorship(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -333,8 +345,39 @@ class SponsorshipController extends Controller
                 ], 400);
             }
 
+            // تحديث حالة الحملة
             $campaign->status = \App\Enums\CampaignStatus::Active;
             $campaign->save();
+
+            // 🔹 إرسال إشعار (اختياري)
+            try {
+                $beneficiary = $sponsorship->beneficiary;
+                $user = $beneficiary ? User::find($beneficiary->user_id) : null;
+
+                if ($user) {
+                    $notificationService = app()->make(\App\Services\NotificationService::class);
+
+                    $title = [
+                        'en' => "Sponsorship Activated",
+                        'ar' => "تم تفعيل الكفالة",
+                    ];
+
+                    $body = [
+                        'en' => "Your sponsorship has been activated under the campaign '{$campaign->title_en}'.",
+                        'ar' => "تم تفعيل كفالتك ضمن الحملة '{$campaign->title_ar}'.",
+                    ];
+
+                    $notificationService->sendFcmNotification(new Request([
+                        'user_id' => $user->id,
+                        'title_en' => $title['en'],
+                        'title_ar' => $title['ar'],
+                        'body_en' => $body['en'],
+                        'body_ar' => $body['ar'],
+                    ]));
+                }
+            } catch (\Exception $e) {
+                \Log::error("Failed to send sponsorship activation notification: " . $e->getMessage());
+            }
 
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم تفعيل الكفالة بنجاح' : 'Sponsorship activated successfully',
@@ -354,6 +397,7 @@ class SponsorshipController extends Controller
             ], 500);
         }
     }
+
     /*
     public function cancelledSponsorship(Request $request, $id)
     {
@@ -449,14 +493,17 @@ class SponsorshipController extends Controller
                 ], 400);
             }
 
+            // ✅ أول شي نحفظ التغييرات
             $sponsorship->is_permanent = true;
-            $sponsorship->cancelled_note = $validated['note'] ?? null;
+            $sponsorship->cancelled_note = $validated['note'];
             $sponsorship->cancelled_at = now();
+            $sponsorship->save();
 
-// إرسال إشعار للمستفيد
-            $beneficiary = $sponsorship->beneficiary;
-            if ($beneficiary) {
-                $user = User::find($beneficiary->user_id);
+            // 🔹 بعدها نرسل الإشعار بشكل منفصل
+            try {
+                $beneficiary = $sponsorship->beneficiary;
+                $user = $beneficiary ? User::find($beneficiary->user_id) : null;
+
                 if ($user) {
                     $notificationService = app()->make(\App\Services\NotificationService::class);
 
@@ -467,7 +514,7 @@ class SponsorshipController extends Controller
 
                     $body = [
                         'en' => "Your sponsorship has been permanently cancelled. Note: {$validated['note']}",
-                        'ar' => "تم إلغاء كفالتك  بشكل دائم. السبب: {$validated['note']}",
+                        'ar' => "تم إلغاء كفالتك بشكل دائم. السبب: {$validated['note']}",
                     ];
 
                     $notificationService->sendFcmNotification(new Request([
@@ -478,13 +525,16 @@ class SponsorshipController extends Controller
                         'body_ar' => $body['ar'],
                     ]));
                 }
+            } catch (\Exception $e) {
+                \Log::error("Failed to send cancellation notification: " . $e->getMessage());
             }
-            $sponsorship->save();
+
             return response()->json([
                 'message' => $locale === 'ar' ? 'تم إلغاء الكفالة بشكل دائم' : 'Sponsorship permanently cancelled',
                 'status' => 200,
                 'data' => $sponsorship->load('campaign', 'beneficiary')
             ]);
+
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'message' => $locale === 'ar' ? 'الكفالة غير موجودة' : 'Sponsorship not found',
@@ -495,9 +545,10 @@ class SponsorshipController extends Controller
                 'message' => $locale === 'ar' ? 'حدث خطأ أثناء إلغاء الكفالة' : 'Error cancelling sponsorship',
                 'error' => $e->getMessage(),
                 'status' => 500
-            ]);
+            ], 500);
         }
     }
+
     public function getSponsorshipsByCategory($categoryId)
     {
         $locale = app()->getLocale();

@@ -266,14 +266,11 @@ class BeneficiaryRequestController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $requestData = Beneficiary_request::findOrFail($id);
-
         $statusMap = [
             'accepted' => ['ar' => 'مقبول', 'en' => 'accepted'],
             'rejected' => ['ar' => 'مرفوض', 'en' => 'rejected'],
         ];
 
-        // التحقق من المدخلات
         $validated = $request->validate([
             'status' => 'required|in:accepted,rejected',
 
@@ -286,74 +283,92 @@ class BeneficiaryRequestController extends Controller
             'reason_of_rejection_en' => 'required_if:status,rejected',
         ]);
 
-        $status = $validated['status'];
+        try {
+            $requestData = Beneficiary_request::findOrFail($id);
 
-        $updateData = [
-            'status_ar' => $statusMap[$status]['ar'],
-            'status_en' => $statusMap[$status]['en'],
-        ];
+            $status = $validated['status'];
 
-        if ($status === 'rejected') {
-            $updateData['reason_of_rejection_ar'] = $validated['reason_of_rejection_ar'];
-            $updateData['reason_of_rejection_en'] = $validated['reason_of_rejection_en'];
-        }
+            $updateData = [
+                'status_ar' => $statusMap[$status]['ar'],
+                'status_en' => $statusMap[$status]['en'],
+            ];
 
-        // تحديث الطلب
-        $requestData->update($updateData);
-
-        $response = ['message' => 'Request status updated successfully'];
-
-        if ($status === 'accepted') {
-            // التحقق إن كان المستفيد موجود مسبقًا
-            $existing = Beneficiary::where('beneficiary_request_id', $requestData->id)->first();
-
-            if (!$existing) {
-                $beneficiary= Beneficiary::create([
-                    'user_id' => $requestData->user_id,
-                    'beneficiary_request_id' => $requestData->id,
-                    'priority_ar' => $validated['priority_ar'],
-                    'priority_en' => $validated['priority_en'],
-                    'is_sorted' => false, // يمكنك تعديله حسب الحاجة
-                ]);
-                $response['beneficiary_id'] = $beneficiary->id;
+            if ($status === 'rejected') {
+                $updateData['reason_of_rejection_ar'] = $validated['reason_of_rejection_ar'];
+                $updateData['reason_of_rejection_en'] = $validated['reason_of_rejection_en'];
             }
-        }
 
-        //  إرسال إشعار للمستخدم
-        $user = User::find($requestData->user_id);
-        if ($user) {
+            \DB::beginTransaction();
+
+            $requestData->update($updateData);
+
+            $response = ['message' => 'Request status updated successfully'];
+
             if ($status === 'accepted') {
-                $title = [
-                    'en' => 'Your benefit request has been accepted',
-                    'ar' => 'تم قبول طلب استفادتك',
-                ];
-                $body = [
-                    'en' => 'Congratulations! Your request is now approved, We will call you as soon as possible.',
-                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت مستفيدًا، انتظر منا مكالمة قريبة',
-                ];
-            } else {
-                $title = [
-                    'en' => 'Your benefit request has been rejected',
-                    'ar' => 'تم رفض طلب استفادتك',
-                ];
-                $body = [
-                    'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_of_rejection_en'],
-                    'ar' => 'نعتذر، تم رفض طلبك. السبب: ' . $validated['reason_of_rejection_ar'],
-                ];
+                $existing = Beneficiary::where('beneficiary_request_id', $requestData->id)->first();
+
+                if (!$existing) {
+                    $beneficiary = Beneficiary::create([
+                        'user_id' => $requestData->user_id,
+                        'beneficiary_request_id' => $requestData->id,
+                        'priority_ar' => $validated['priority_ar'],
+                        'priority_en' => $validated['priority_en'],
+                        'is_sorted' => false,
+                    ]);
+                    $response['beneficiary_id'] = $beneficiary->id;
+                }
             }
-            $notificationService = app()->make(\App\Services\NotificationService::class);
-            $notificationService->sendFcmNotification(new Request([
-                'user_id' => $user->id,
-                'title_en' => $title['en'],
-                'title_ar' => $title['ar'],
-                'body_en' => $body['en'],
-                'body_ar' => $body['ar'],
-            ]));
+
+            \DB::commit();
+
+            // 🔹 إرسال الإشعار بعد ما تضمن نجاح الـ DB
+            try {
+                $user = User::find($requestData->user_id);
+
+                if ($user) {
+                    if ($status === 'accepted') {
+                        $title = [
+                            'en' => 'Your benefit request has been accepted',
+                            'ar' => 'تم قبول طلب استفادتك',
+                        ];
+                        $body = [
+                            'en' => 'Congratulations! Your request is now approved, We will call you as soon as possible.',
+                            'ar' => 'تهانينا! تم قبول طلبك وأصبحت مستفيدًا، انتظر منا مكالمة قريبة',
+                        ];
+                    } else {
+                        $title = [
+                            'en' => 'Your benefit request has been rejected',
+                            'ar' => 'تم رفض طلب استفادتك',
+                        ];
+                        $body = [
+                            'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_of_rejection_en'],
+                            'ar' => 'نعتذر، تم رفض طلبك. السبب: ' . $validated['reason_of_rejection_ar'],
+                        ];
+                    }
+
+                    $notificationService = app()->make(\App\Services\NotificationService::class);
+                    $notificationService->sendFcmNotification(new Request([
+                        'user_id'   => $user->id,
+                        'title_en'  => $title['en'],
+                        'title_ar'  => $title['ar'],
+                        'body_en'   => $body['en'],
+                        'body_ar'   => $body['ar'],
+                    ]));
+                }
+            } catch (\Exception $e) {
+                \Log::error("Failed to send notification for beneficiary request #{$id}: " . $e->getMessage());
+            }
+
+            return response()->json($response);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Request not found'], 404);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json(['message' => 'Error updating request', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json([$response]);
-
     }
+
 
     public function getBeneficiariesByPriority(Request $request)
     {

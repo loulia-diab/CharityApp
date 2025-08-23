@@ -48,11 +48,14 @@ class InKindBeneficiaryController extends Controller
 
     }
 */
-    public function addBeneficiariesToInKind(Request $request, $inKindId) {
+    public function addBeneficiariesToInKind(Request $request, $inKindId)
+    {
+        $locale = app()->getLocale();
+
         $admin = auth('admin')->user();
         if (!$admin) {
             return response()->json([
-                'message' => 'Unauthorized - Admin access only',
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized - Admin access only',
             ], 401);
         }
 
@@ -62,55 +65,71 @@ class InKindBeneficiaryController extends Controller
         ]);
 
         $inKind = InKind::find($inKindId);
-
         if (!$inKind) {
             return response()->json([
-                'message' => 'In-kind donation not found',
+                'message' => $locale === 'ar' ? 'التبرع العيني غير موجود' : 'In-kind donation not found',
             ], 404);
         }
 
-        $inKind->beneficiaries()->syncWithoutDetaching($request->beneficiary_ids);
+        try {
+            DB::transaction(function () use ($request, $inKind, $admin) {
+                // إضافة المستفيدين دون حذف الموجودين
+                $inKind->beneficiaries()->syncWithoutDetaching($request->beneficiary_ids);
 
-        // تحديث is_sorted لكل المستفيدين المضافين
-        Beneficiary::whereIn('id', $request->beneficiary_ids)
-            ->update(['is_sorted' => true]);
+                // تحديث is_sorted للمستفيدين الجدد
+                Beneficiary::whereIn('id', $request->beneficiary_ids)
+                    ->update(['is_sorted' => true]);
 
-        // جلب المستفيدين بعد التحديث
-        $inKind->load('beneficiaries');
-
-        //  إرسال إشعار لكل مستفيد تمت إضافته
-        foreach ($inKind->beneficiaries as $beneficiary) {
-            if (in_array($beneficiary->id, $request->beneficiary_ids)) {
+                // إرسال إشعار لكل مستفيد جديد
                 $notificationService = app()->make(\App\Services\NotificationService::class);
 
-                $title = [
-                    'en' => "New In-Kind Donation Assigned",
-                    'ar' => "تم تخصيص تبرع عيني جديد لك",
-                ];
+                foreach ($request->beneficiary_ids as $beneficiaryId) {
+                    $beneficiary = Beneficiary::find($beneficiaryId);
+                    if ($beneficiary && $beneficiary->user_id) {
+                        try {
+                            $title = [
+                                'en' => "New In-Kind Donation Assigned",
+                                'ar' => "تم تخصيص تبرع عيني جديد لك",
+                            ];
 
-                $body = [
-                    'en' => "You have been added as a beneficiary to an in-kind donation.",
-                    'ar' => "تمت إضافتك كمستفيد من تبرع عيني.",
-                ];
+                            $body = [
+                                'en' => "You have been added as a beneficiary to an in-kind donation.",
+                                'ar' => "تمت إضافتك كمستفيد من تبرع عيني.",
+                            ];
 
-                $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
-                    'user_id'  => $beneficiary->user_id, // حسب علاقتك بالمستفيد
-                    'title_en' => $title['en'],
-                    'title_ar' => $title['ar'],
-                    'body_en'  => $body['en'],
-                    'body_ar'  => $body['ar'],
-                    'type'     => 'in_kind',
-                    'item_id'  => $inKind->id,
-                ]));
+                            $notificationService->sendFcmNotification(new \Illuminate\Http\Request([
+                                'user_id'  => $beneficiary->user_id,
+                                'title_en' => $title['en'],
+                                'title_ar' => $title['ar'],
+                                'body_en'  => $body['en'],
+                                'body_ar'  => $body['ar'],
+                                'type'     => 'in_kind',
+                                'item_id'  => $inKind->id,
+                            ]));
+                        } catch (\Exception $e) {
+                            \Log::error("Failed to send notification to user #{$beneficiary->user_id}: " . $e->getMessage());
+                        }
+                    }
+                }
+            });
 
-            }
+            // إعادة تحميل المستفيدين بعد الإضافة
+            $inKind->load('beneficiaries');
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تمت إضافة المستفيدين بنجاح للتبرع العيني' : 'Beneficiaries added to in-kind donation successfully',
+                'data' => $inKind->beneficiaries,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء إضافة المستفيدين' : 'Error adding beneficiaries to in-kind donation',
+                'error' => $e->getMessage(),
+                'status' => 500,
+            ], 500);
         }
-
-        return response()->json([
-            'message' => 'Beneficiaries added to in-kind donation successfully',
-            'data' => $inKind->beneficiaries,
-        ]);
     }
+
 
     // جلب مستفيدين تبرع عيني لحالو
     public function getInKindBeneficiaries($inKindId) {

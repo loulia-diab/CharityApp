@@ -281,90 +281,102 @@ class VolunteerRequestController extends Controller
     public function updateVolunteerRequestStatus(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
-
         if (!$admin) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $validated = $request->validate([
-            'status' => 'required|in:accepted,rejected',
-            'reason_ar' => 'required_if:status,rejected|string|nullable',
-            'reason_en' => 'required_if:status,rejected|string|nullable',
-        ]);
-
-        $volunteerRequest = Volunteer_request::findOrFail($id);
-
-        // ترجمة الحالة
         $statusMap = [
             'accepted' => ['ar' => 'مقبول', 'en' => 'accepted'],
             'rejected' => ['ar' => 'مرفوض', 'en' => 'rejected'],
         ];
 
-        $updateData = [
-            'status_ar' => $statusMap[$validated['status']]['ar'],
-            'status_en' => $statusMap[$validated['status']]['en'],
-        ];
+        $validated = $request->validate([
+            'status' => 'required|in:accepted,rejected',
 
-        // في حال الرفض، خزّن سببي الرفض
-        if ($validated['status'] === 'rejected') {
-            $updateData['reason_of_rejection_ar'] = $validated['reason_ar'];
-            $updateData['reason_of_rejection_en'] = $validated['reason_en'];
-        }
+            // عند الرفض
+            'reason_ar' => 'required_if:status,rejected|string|nullable',
+            'reason_en' => 'required_if:status,rejected|string|nullable',
+        ]);
 
-        $volunteerRequest->update($updateData);
+        try {
+            $volunteerRequest = Volunteer_request::findOrFail($id);
+            $status = $validated['status'];
 
-        $response = ['message' => 'Status updated successfully'];
+            $updateData = [
+                'status_ar' => $statusMap[$status]['ar'],
+                'status_en' => $statusMap[$status]['en'],
+            ];
 
-        // في حال القبول، أضف المتطوع
-        if ($validated['status'] === 'accepted') {
-            $volunteer =Volunteer::firstOrCreate(
-                ['volunteer_request_id' => $volunteerRequest->id,],
-                ['user_id' => $volunteerRequest->user_id,
-            ]);
-            $response['volunteer_id'] = $volunteer->id;
-        }
-        // إرسال إشعار للمستخدم
-        $user = User::find($volunteerRequest->user_id); // صحّحت $requestData إلى $volunteerRequest
-        if ($user) {
-            $title = [];
-            $body = [];
-
-
-            if ($validated['status'] === 'accepted') {
-                $title = [
-                    'en' => 'Your volunteer request has been accepted',
-                    'ar' => 'تم قبول طلب تطوعك',
-                ];
-                $body = [
-                    'en' => 'Congratulations! Your request is now approved, We will call you as soon as possible.',
-                    'ar' => 'تهانينا! تم قبول طلبك وأصبحت متطوعًا، انتظر منا مكالمة قريبة!',
-                ];
-            } else {
-                $title = [
-                    'en' => 'Your volunteer request has been rejected',
-                    'ar' => 'تم رفض طلب تطوعك',
-                ];
-                $body = [
-                    'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_en'],
-                    'ar' => 'نعتذر، تم رفض طلبك. السبب: ' . $validated['reason_ar'],
-                ];
+            if ($status === 'rejected') {
+                $updateData['reason_of_rejection_ar'] = $validated['reason_ar'];
+                $updateData['reason_of_rejection_en'] = $validated['reason_en'];
             }
 
-            $notificationService = app()->make(\App\Services\NotificationService::class);
-            $notificationService->sendFcmNotification(new Request([
-                'user_id' => $user->id,
-                'title_en' => $title['en'],
-                'title_ar' => $title['ar'],
-                'body_en' => $body['en'],
-                'body_ar' => $body['ar'],
-            ]));
-        }
-        /*
-        return response()->json(['message' => 'Status updated successfully',
-            'Volunteer_id'=> $Volunteer->id
-            ]);
-*/
-       return response()->json([$response]);
+            \DB::beginTransaction();
 
+            $volunteerRequest->update($updateData);
+
+            $response = ['message' => 'Volunteer request status updated successfully'];
+
+            if ($status === 'accepted') {
+                $volunteer = Volunteer::firstOrCreate(
+                    ['volunteer_request_id' => $volunteerRequest->id],
+                    ['user_id' => $volunteerRequest->user_id]
+                );
+                $response['volunteer_id'] = $volunteer->id;
+            }
+
+            \DB::commit();
+
+            // 🔹 إرسال الإشعار بعد نجاح العملية
+            try {
+                $user = User::find($volunteerRequest->user_id);
+
+                if ($user) {
+                    if ($status === 'accepted') {
+                        $title = [
+                            'en' => 'Your volunteer request has been accepted',
+                            'ar' => 'تم قبول طلب تطوعك',
+                        ];
+                        $body = [
+                            'en' => 'Congratulations! Your request is now approved, We will call you as soon as possible.',
+                            'ar' => 'تهانينا! تم قبول طلبك وأصبحت متطوعًا، انتظر منا مكالمة قريبة!',
+                        ];
+                    } else {
+                        $title = [
+                            'en' => 'Your volunteer request has been rejected',
+                            'ar' => 'تم رفض طلب تطوعك',
+                        ];
+                        $body = [
+                            'en' => 'Unfortunately, your request has been rejected. Reason: ' . $validated['reason_en'],
+                            'ar' => 'نعتذر، تم رفض طلبك. السبب: ' . $validated['reason_ar'],
+                        ];
+                    }
+
+                    $notificationService = app()->make(\App\Services\NotificationService::class);
+                    $notificationService->sendFcmNotification(new Request([
+                        'user_id'   => $user->id,
+                        'title_en'  => $title['en'],
+                        'title_ar'  => $title['ar'],
+                        'body_en'   => $body['en'],
+                        'body_ar'   => $body['ar'],
+                    ]));
+                }
+            } catch (\Exception $e) {
+                \Log::error("Failed to send notification for volunteer request #{$id}: " . $e->getMessage());
+            }
+
+            return response()->json($response);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Volunteer request not found'], 404);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'message' => 'Error updating volunteer request',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
+
 }

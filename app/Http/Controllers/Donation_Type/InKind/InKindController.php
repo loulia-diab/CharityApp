@@ -190,7 +190,6 @@ class InKindController extends Controller
         DB::beginTransaction();
 
         try {
-            // جلب التبرع العيني مع الحملة المرتبطة وقفل السجل للتحديث
             $inKind = InKind::with('campaign')->find($request->in_kind_id);
 
             if (!$inKind) {
@@ -201,14 +200,13 @@ class InKindController extends Controller
             }
 
             $campaign = $inKind->campaign;
-
-
             if (!$campaign) {
                 DB::rollBack();
                 return response()->json([
                     'message' => $locale === 'ar' ? 'الحملة المرتبطة غير موجودة' : 'Related campaign not found',
                 ], 404);
             }
+
             if ($campaign->status !== CampaignStatus::Pending) {
                 DB::rollBack();
                 return response()->json([
@@ -218,16 +216,14 @@ class InKindController extends Controller
                 ], 422);
             }
 
-
-            // تحديث حالة الحملة إلى active
+            // تحديث حالة الحملة
             $campaign->status = CampaignStatus::Active;
             $campaign->save();
 
-            // تحديث وقت التعديل في التبرع العيني (اختياري)
             $inKind->updated_at = now();
             $inKind->save();
 
-            // إنشاء عملية transaction لتسجيل القبول
+            // إنشاء عملية
             $transaction = Transaction::create([
                 'user_id'     => $inKind->user_id,
                 'admin_id'    => $admin->id,
@@ -237,7 +233,19 @@ class InKindController extends Controller
                 'direction'   => 'in',
                 'amount'      => 0,
             ]);
-            // إرسال إشعار للمستخدم
+
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء العملية' : 'Error during operation',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+
+        // 🔹 إرسال الإشعار بعد نجاح العملية (خارج الترانزاكشن)
+        try {
             $user = User::find($inKind->user_id);
             if ($user) {
                 $notificationService = app()->make(\App\Services\NotificationService::class);
@@ -260,34 +268,29 @@ class InKindController extends Controller
                     'body_ar' => $body['ar'],
                 ]));
             }
-
-            DB::commit();
-
-            return response()->json([
-                'message' => $locale === 'ar'
-                    ? 'تم قبول التبرع العيني وتحديث حالة الحملة'
-                    : 'In-kind donation accepted and campaign status updated',
-                'data' => [
-                    'in_kind' => [
-                        'id' => $inKind->id,
-                        'user_id' => $inKind->user_id,
-                        'campaign_id' => $inKind->campaign_id,
-                        'address' => $locale === 'ar' ? $inKind->address_ar : $inKind->address_en,
-                        'phone' => $inKind->phone,
-                        'created_at' => $inKind->created_at,
-                        'updated_at' => $inKind->updated_at,
-                        'status_label' => $campaign?->status_label ?? null,
-                    ],
-                    'transaction'=>$transaction
-                ],
-            ]);
         } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => $locale === 'ar' ? 'حدث خطأ أثناء العملية' : 'Error during operation',
-                'error' => $e->getMessage(),
-            ], 500);
+            // إذا فشل الإشعار، بس سجل الخطأ وما توقف العملية
+            \Log::error("Failed to send notification: " . $e->getMessage());
         }
+
+        return response()->json([
+            'message' => $locale === 'ar'
+                ? 'تم قبول التبرع العيني وتحديث حالة الحملة'
+                : 'In-kind donation accepted and campaign status updated',
+            'data' => [
+                'in_kind' => [
+                    'id' => $inKind->id,
+                    'user_id' => $inKind->user_id,
+                    'campaign_id' => $inKind->campaign_id,
+                    'address' => $locale === 'ar' ? $inKind->address_ar : $inKind->address_en,
+                    'phone' => $inKind->phone,
+                    'created_at' => $inKind->created_at,
+                    'updated_at' => $inKind->updated_at,
+                    'status_label' => $campaign?->status_label ?? null,
+                ],
+                'transaction'=>$transaction
+            ],
+        ]);
     }
 
     public function getAllInKinds1()

@@ -6,6 +6,7 @@ use App\Http\Controllers\beneficiary\BeneficiaryController;
 use App\Http\Controllers\beneficiary\BeneficiaryRequestController;
 use App\Http\Controllers\BoxController;
 use App\Http\Controllers\Category\CategoryController;
+use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignBeneficiaryController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignController;
 use App\Http\Controllers\Donation_Type\Campaign\CampaignFilterController;
@@ -202,7 +203,9 @@ Route::prefix('inKinds')->group(function () {
 // استفاداتي
 Route::get('/beneficiary/getAllBenefits', [BeneficiaryController::class, 'getBeneficiaryActivities']);
 // المستفيدين المفروزين معلومات
-Route::get('/beneficiary/getSorted', [BeneficiaryController::class, 'getSortedBeneficiariesActivities']);
+    Route::get('/beneficiary/getSorted', [BeneficiaryController::class, 'getSortedBeneficiariesActivities']);
+// تفاصيل المستفيدين المفروزين
+    Route::get('/beneficiary/getSorted/{beneficiaryId}', [BeneficiaryController::class, 'getSortedBeneficiaryDetails']);
 // تفاصيل المستفيدين المفروزين
 Route::get('/beneficiary/getSorted/{beneficiaryId}', [BeneficiaryController::class, 'getSortedBeneficiaryDetails']);
 // تطوعاتي
@@ -241,8 +244,8 @@ Route::prefix('reports')->group(function () {
     });
 //اشعاراتي
     Route::get('/getAllNotifications', [NotificationController::class, 'getAllNotifications']);
-    //
-
+    // تسجيل الجهاز من أجل الاشعارات
+    Route::post('/register-device', [DeviceController::class, 'registerDevice']);
 
 });
 

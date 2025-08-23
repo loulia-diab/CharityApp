@@ -263,9 +263,7 @@ class HumanCaseController extends Controller
 
         $admin = auth('admin')->user();
         if (!$admin) {
-            return response()->json([
-                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized'
-            ], 401);
+            return response()->json(['message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized'], 401);
         }
 
         $category = Category::where('id', $request->category_id)
@@ -273,80 +271,81 @@ class HumanCaseController extends Controller
             ->first();
 
         if (!$category) {
-            return response()->json([
-                'message' => $locale === 'ar' ? 'التصنيف غير صالح' : 'Invalid category'
-            ], 422);
+            return response()->json(['message' => $locale === 'ar' ? 'التصنيف غير صالح' : 'Invalid category'], 422);
         }
 
         try {
-            // إنشاء الحملة بدون صورة أولًا
-            $campaign = Campaign::create([
-                'title_en' => $request->case_name_en,
-                'title_ar' => $request->case_name_ar,
-                'description_en' => $request->description_en ?? '',
-                'description_ar' => $request->description_ar ?? '',
-                'category_id' => $request->category_id,
-                'goal_amount' => $request->goal_amount ?? 0,
-                'collected_amount' => 0,
-                'status' => $request->status ?? CampaignStatus::Pending,
-                'image' => '', // بدون صورة في البداية
-            ]);
+            return DB::transaction(function () use ($request, $locale) {
+                // إنشاء الحملة أولًا
+                $campaign = Campaign::create([
+                    'title_en' => $request->case_name_en,
+                    'title_ar' => $request->case_name_ar,
+                    'description_en' => $request->description_en ?? '',
+                    'description_ar' => $request->description_ar ?? '',
+                    'category_id' => $request->category_id,
+                    'goal_amount' => $request->goal_amount ?? 0,
+                    'collected_amount' => 0,
+                    'status' => $request->status ?? CampaignStatus::Pending,
+                    'image' => '',
+                ]);
 
-            // إذا في صورة، رفعها باسم يحتوي رقم ال ID
-            if ($request->hasFile('image')) {
-                $imageFile = $request->file('image');
-                $ext = $imageFile->getClientOriginalExtension();
-                $imageName = 'human_case_' . $campaign->id . '.' . $ext;
-                $path = $imageFile->storeAs('human_case_images', $imageName, 'public');
+                // رفع الصورة بعد إنشاء الـ ID
+                if ($request->hasFile('image')) {
+                    $imageFile = $request->file('image');
+                    $ext = $imageFile->getClientOriginalExtension();
+                    $imageName = 'human_case_' . $campaign->id . '.' . $ext;
+                    $path = $imageFile->storeAs('human_case_images', $imageName, 'public');
+                    $campaign->update(['image' => $path]);
+                }
 
-                $campaign->image = $path;
-                $campaign->save();
-            }
+                // إنشاء الحالة الإنسانية وربطها بالحملة والمستفيد
+                $humanCase = HumanCase::create([
+                    'campaign_id' => $campaign->id,
+                    'beneficiary_id' => $request->beneficiary_id,
+                    'is_emergency' => $request->is_emergency ?? false,
+                ]);
 
-            // إنشاء الحالة الإنسانية وربطها بالحملة والمستفيد
-            $humanCase = HumanCase::create([
-                'campaign_id' => $campaign->id,
-                'beneficiary_id' => $request->beneficiary_id,
-                'is_emergency' => $request->is_emergency ?? false,
-            ]);
+                // تحديث المستفيد
+                $beneficiary = Beneficiary::find($request->beneficiary_id);
+                if ($beneficiary) {
+                    $beneficiary->is_sorted = true;
+                    $beneficiary->save();
 
-            $beneficiary = Beneficiary::find($request->beneficiary_id);
-            if ($beneficiary) {
-                $beneficiary->is_sorted = true;
-                $beneficiary->save();
-            }
-            // إرسال إشعار قبول الحالة الإنسانية
-            $user = User::find($beneficiary->user_id);
-            if ($user) {
-                $notificationService = app()->make(\App\Services\NotificationService::class);
+                    // إرسال إشعار للمستفيد
+                    try {
+                        $user = User::find($beneficiary->user_id);
+                        if ($user) {
+                            $notificationService = app()->make(\App\Services\NotificationService::class);
 
-                $title = [
-                    'en' => "Human Case Accepted",
-                    'ar' => "تم قبول استفادتك كحالة إنسانية",
-                ];
+                            $title = [
+                                'en' => "Human Case Accepted",
+                                'ar' => "تم قبول استفادتك كحالة إنسانية",
+                            ];
 
-                $body = [
-                    'en' => "Your human case has been accepted under the campaign '{$campaign->title_en}'. You will be contacted for further coordination.",
-                    'ar' => "تم قبول حالتك الإنسانية ، سيتم التواصل معك لمزيد من التنسيق.",
-                ];
+                            $body = [
+                                'en' => "Your human case has been accepted under the campaign '{$campaign->title_en}'. You will be contacted for further coordination.",
+                                'ar' => "تم قبول حالتك الإنسانية ، سيتم التواصل معك لمزيد من التنسيق.",
+                            ];
 
-                $notificationService->sendFcmNotification(new Request([
-                    'user_id' => $user->id,
-                    'title_en' => $title['en'],
-                    'title_ar' => $title['ar'],
-                    'body_en' => $body['en'],
-                    'body_ar' => $body['ar'],
-                ]));
-            }
+                            $notificationService->sendFcmNotification(new Request([
+                                'user_id' => $user->id,
+                                'title_en' => $title['en'],
+                                'title_ar' => $title['ar'],
+                                'body_en' => $body['en'],
+                                'body_ar' => $body['ar'],
+                            ]));
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error("Failed to send notification for human case #{$humanCase->id}: " . $e->getMessage());
+                    }
+                }
 
-            return response()->json([
-                'message' => $locale === 'ar' ? 'تم إنشاء الحالة الإنسانية والحملة بنجاح' : 'Human case and campaign created successfully',
-                'data' => [
-                    'human_case' => $humanCase->load('campaign', 'beneficiary'),
-                ],
-                'status' => 201
-            ], 201);
-
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'تم إنشاء الحالة الإنسانية والحملة بنجاح' : 'Human case and campaign created successfully',
+                    'data' => ['human_case' => $humanCase->load('campaign', 'beneficiary')],
+                    'status' => 201
+                ], 201);
+            });
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $locale === 'ar' ? 'حدث خطأ أثناء إنشاء الحالة الإنسانية' : 'Error creating human case',
@@ -355,6 +354,7 @@ class HumanCaseController extends Controller
             ], 500);
         }
     }
+
     public function updateHumanCase(Request $request, $id)
     {
         $admin = auth('admin')->user();

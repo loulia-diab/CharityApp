@@ -37,6 +37,7 @@ class UserController extends Controller
 
     public function updateProfile(Request $request)
     {
+       try {
         $user = auth()->guard('api')->user();
 
         if (!$user) {
@@ -90,6 +91,27 @@ class UserController extends Controller
             'message' => 'Profile updated successfully',
             'data' => $data,
         ], 200);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        // أخطاء التحقق من المدخلات
+        return response()->json([
+            'message' => 'Validation error',
+            'errors' => $e->errors()
+        ], 422);
+
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        // إذا المستخدم لم يتم العثور عليه
+        return response()->json([
+            'message' => 'User not found',
+        ], 404);
+
+    } catch (\Exception $e) {
+        // أي خطأ آخر غير متوقع
+        return response()->json([
+            'message' => 'An unexpected error occurred',
+            'error' => $e->getMessage(),   // هنا يطبع نوع/نص الخطأ
+        ], 500);
+    }
     }
 
     public function changePassword(Request $request)

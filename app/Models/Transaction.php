@@ -51,4 +51,9 @@ class Transaction extends Model
             $transaction->update(['pdf_url' => $fileName]);
         });
     }
+
+     protected $casts = [
+        'amount' => 'float',
+        
+    ];
 }

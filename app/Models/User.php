@@ -28,6 +28,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+     protected $casts = [
+        'balance' => 'float',
+        
+    ];
+
     public function volunteer_requests()
     {
         return $this->hasMany(Volunteer_request::class);

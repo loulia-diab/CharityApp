@@ -150,7 +150,7 @@ class UserController extends Controller
             'users'   => $users,
         ]);
     }
-
+/*
     public function getMyRecharges(Request $request)
     {
         $user = auth('api')->user();
@@ -216,6 +216,92 @@ class UserController extends Controller
                             'image'       => $transaction->box->image,
                             'amount'      => $transaction->amount,
                             'date'        => $transaction->created_at->toDateTimeString(),
+                        ];
+                    }
+                    return null;
+                })
+                ->filter()
+                ->values();
+
+            return response()->json([
+                'message'   => 'تم جلب التبرعات بنجاح',
+                'donations' => $donations
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حصل خطأ أثناء جلب البيانات',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+*/
+    public function getMyRecharges(Request $request)
+    {
+        $user = auth('api')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $recharges = $user->recharges()
+            ->select('amount', 'created_at')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($trx) {
+                return [
+                    'amount' => $trx->amount,
+                    'date'   => $trx->created_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json([
+            'message' => 'سجل عمليات الشحن',
+            'data'    => $recharges,
+        ]);
+    }
+
+    public function getMyDonations(Request $request)
+    {
+        $user = auth()->guard('api')->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $locale = app()->getLocale();
+
+        try {
+            $donations = Transaction::query()
+                ->where('user_id', $user->id)
+                ->where('type', 'donation')
+                ->where('direction', 'in')
+                ->where(function ($query) {
+                    $query->where('box_id', '!=', 14)
+                        ->orWhereNull('box_id');
+                })
+                ->whereDoesntHave('campaign.category', function ($query) {
+                    $query->whereIn('main_category', ['Sponsorship', 'InKind']);
+                })
+                ->with([
+                    'campaign.category',
+                    'box'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($transaction) use ($locale) {
+                    if ($transaction->campaign) {
+                        return [
+                            'title'       => $transaction->campaign->{'title_' . $locale},
+                            'image'       => $transaction->campaign->image,
+                            'amount'      => $transaction->amount,
+                            'date'        => $transaction->created_at->toDateTimeString(),
+                            'pdf_url'     => $transaction->pdf_url ?? null,
+                        ];
+                    } elseif ($transaction->box) {
+                        return [
+                            'title'       => $transaction->box->{'name_' . $locale},
+                            'image'       => $transaction->box->image,
+                            'amount'      => $transaction->amount,
+                            'date'        => $transaction->created_at->toDateTimeString(),
+                            'pdf_url'     => $transaction->pdf_url ?? null,
                         ];
                     }
                     return null;

@@ -207,6 +207,7 @@ class GiftController extends Controller
                     'recipient_name' => $gift->recipient_name,
                     'amount'         => $gift->transaction->amount ?? 0,
                     'donated_at'     => $gift->transaction->created_at ? $gift->transaction->created_at->toDateTimeString() : null,
+                    'pdf_url'        => $gift->transaction->pdf_url ?? null,
                 ];
             });
 
@@ -214,5 +215,6 @@ class GiftController extends Controller
             'gifts' => $gifts
         ]);
     }
+
 
 }

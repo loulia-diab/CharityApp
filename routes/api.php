@@ -203,6 +203,8 @@ Route::prefix('inKinds')->group(function () {
 Route::get('/beneficiary/getAllBenefits', [BeneficiaryController::class, 'getBeneficiaryActivities']);
 // المستفيدين المفروزين معلومات
 Route::get('/beneficiary/getSorted', [BeneficiaryController::class, 'getSortedBeneficiariesActivities']);
+// تفاصيل المستفيدين المفروزين
+    Route::get('/beneficiary/getSorted/{beneficiaryId}', [BeneficiaryController::class, 'getSortedBeneficiaryDetails']);
 // تطوعاتي
 Route::get('/volunteer/getAll', [VolunteerController::class, 'getVolunteerCampaigns']);
 // معلومات المتطوعين بشو تتطوعوا للادمن

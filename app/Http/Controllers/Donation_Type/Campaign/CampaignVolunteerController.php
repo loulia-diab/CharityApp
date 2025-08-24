@@ -7,6 +7,7 @@ use App\Models\Campaigns\Campaign;
 use App\Models\User;
 use App\Models\Volunteer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CampaignVolunteerController extends Controller
 {
@@ -209,7 +210,7 @@ class CampaignVolunteerController extends Controller
     }
 
 
-    public function getCampaignVolunteers($campaignId)
+    public function getCampaignVolunteers2($campaignId)
     {
         $locale = app()->getLocale();
 
@@ -233,6 +234,50 @@ class CampaignVolunteerController extends Controller
             'status' => 200,
         ]);
     }
+    public function getCampaignVolunteers($campaignId)
+    {
+        $locale = app()->getLocale();
+
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'غير مصرح' : 'Unauthorized',
+            ], 401);
+        }
+
+        $campaign = Campaign::with(['volunteers.volunteer_request', 'category'])->find($campaignId);
+
+        if (!$campaign || !$campaign->category || $campaign->category->main_category !== 'Campaign') {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'الحملة غير موجودة أو غير صالحة' : 'Campaign not found or invalid',
+                'status' => 404,
+            ], 404);
+        }
+
+        $volunteers = $campaign->volunteers->map(function ($volunteer) use ($locale, $campaign) {
+            $request = $volunteer->volunteer_request;
+
+            return [
+                'id'          => $volunteer->id,
+                'user_id'     => $request?->user_id,
+                'campaign_id' => $campaign->id, // هون صار متاح
+                'name'        => $locale === 'ar' ? $request?->full_name_ar : $request?->full_name_en,
+                'phone'       => $request?->phone,
+                'email'       => $request?->user?->email,
+                'gender'      => $locale === 'ar' ? $request?->gender_ar : $request?->gender_en,
+                'birth_date'  => $request?->birth_date,
+                'address'     => $locale === 'ar' ? $request?->address_ar : $request?->address_en,
+            ];
+        });
+
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم جلب المتطوعين بنجاح' : 'Volunteers fetched successfully',
+            'data'    => $volunteers,
+            'status'  => 200,
+        ]);
+    }
+
 
 
 

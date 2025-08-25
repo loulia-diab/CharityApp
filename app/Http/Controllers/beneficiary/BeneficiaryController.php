@@ -26,7 +26,7 @@ class BeneficiaryController extends Controller
                 'status' => 401
             ], 401);
         }
-        $beneficiary =Beneficiary::find($beneficiaryId);
+        $beneficiary = Beneficiary::find($beneficiaryId);
 
         if (!$beneficiary) {
             $locale = app()->getLocale();
@@ -64,6 +64,7 @@ class BeneficiaryController extends Controller
             'status' => 200
         ]);
     }
+
     public function getBeneficiaryHumanCases($beneficiaryId)
     {
         $user = null;
@@ -119,6 +120,7 @@ class BeneficiaryController extends Controller
             'status' => 200
         ]);
     }
+
     public function getBeneficiarySponsorships($beneficiaryId)
     {
         $user = null;
@@ -220,10 +222,10 @@ class BeneficiaryController extends Controller
 
             return [
                 'beneficiary_id' => $activity->beneficiary_id,
-                'beneficiary_name'=>
+                'beneficiary_name' =>
                     [
-                        'ar'=> $activity->beneficiary->beneficiary_request->name_ar,
-                        'en'=> $activity->beneficiary->beneficiary_request->name_en,
+                        'ar' => $activity->beneficiary->beneficiary_request->name_ar,
+                        'en' => $activity->beneficiary->beneficiary_request->name_en,
                     ],
                 'id' => $activity->id,
                 'type' => $type,
@@ -306,7 +308,7 @@ class BeneficiaryController extends Controller
     ///////////////////////////////////////////////////////
 // USER
 
-    ppublic function getBeneficiaryActivities(Request $request)
+    public function getBeneficiaryActivities(Request $request)
 {
     $user = auth()->user();
 

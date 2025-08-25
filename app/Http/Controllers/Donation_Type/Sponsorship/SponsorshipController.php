@@ -375,7 +375,7 @@ class SponsorshipController extends Controller
             $beneficiary = $sponsorship->beneficiary;
 
             return [
-                'id' => $sponsorship->id,
+                'sponsorship_id' => $sponsorship->id,
                 'sponsorship_name' => $locale === 'ar' ? $campaign->title_ar : $campaign->title_en,
                 'image' => $campaign->image ? asset('storage/' . $campaign->image) : null,
                 'description' => $beneficiary->description ?? null,
@@ -385,6 +385,7 @@ class SponsorshipController extends Controller
                 'beneficiary_id' => $beneficiary->id ?? null,
                 'beneficiary_name' => $beneficiary->name ?? null,
                 'created_at' => $sponsorship->created_at,
+                'campaign_id'=>$campaign->id,
             ];
         });
 

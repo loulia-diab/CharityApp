@@ -253,7 +253,7 @@ class InKindController extends Controller
                         'updated_at' => $inKind->updated_at,
                         'status_label' => $campaign?->status_label ?? null,
                     ],
-                    'transaction'=>$transaction
+                    'transaction'=>$transaction,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -326,7 +326,7 @@ class InKindController extends Controller
             ->get()
             ->map(function ($inKind) use ($addressField, $locale) {
                 return [
-                    'id' => $inKind->id,
+                    'in_kind_id' => $inKind->id,
                     'user_id' => $inKind->user_id,
                     'campaign_id' => $inKind->campaign_id,
                     'address' => $inKind->{$addressField} ?? null,

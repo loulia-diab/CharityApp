@@ -42,6 +42,7 @@ class Transaction extends Model
     }
 
     //
+    /*
     protected static function booted()
     {
         static::created(function ($transaction) {
@@ -49,6 +50,16 @@ class Transaction extends Model
             $fileName = 'receipts/transaction_' . $transaction->id . '.pdf';
             Storage::disk('public')->put($fileName, $pdf->output());
             $transaction->update(['pdf_url' => $fileName]);
+        });
+    }
+    */
+    protected static function booted()
+    {
+        static::created(function ($transaction) {
+            // Dispatch the job to generate PDF asynchronously
+            if ($transaction) {
+                dispatch(new \App\Jobs\GenerateTransactionPDF($transaction));
+            }
         });
     }
 

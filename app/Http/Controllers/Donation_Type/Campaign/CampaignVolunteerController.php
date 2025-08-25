@@ -258,7 +258,7 @@ class CampaignVolunteerController extends Controller
             $request = $volunteer->volunteer_request;
 
             return [
-                'id'          => $volunteer->id,
+                'volunteer_id'          => $volunteer->id,
                 'user_id'     => $request?->user_id,
                 'campaign_id' => $campaign->id, // هون صار متاح
                 'name'        => $locale === 'ar' ? $request?->full_name_ar : $request?->full_name_en,

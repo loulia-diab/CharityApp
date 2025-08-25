@@ -300,7 +300,7 @@ class CampaignBeneficiaryController extends Controller
             $request = $beneficiary->beneficiary_request;
 
             return [
-                'id' => $beneficiary->id,
+                'beneficiary_id' => $beneficiary->id,
                 'user_id' => $request?->user_id,
                 'name' => $locale === 'ar' ? $request?->name_ar : $request?->name_en,
                 'phone' => $request?->phone,

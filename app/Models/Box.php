@@ -31,4 +31,9 @@ class Box extends Model
     {
         return $this->hasMany(Box::class, 'box_id');
     }
+
+    protected $casts = [
+        'balance' => 'float',
+
+    ];
 }

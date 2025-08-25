@@ -2,13 +2,10 @@
 
 namespace App\Models;
 
-use App\Jobs\GenerateTransactionPDF;
 use App\Models\Campaigns\Campaign;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Mpdf\Mpdf;
-
 
 class Transaction extends Model
 {
@@ -45,7 +42,6 @@ class Transaction extends Model
     }
 
     //
-    /*
     protected static function booted()
     {
         static::created(function ($transaction) {
@@ -55,65 +51,9 @@ class Transaction extends Model
             $transaction->update(['pdf_url' => $fileName]);
         });
     }
-    */
-    /*
-    protected static function booted()
-    {
-        static::created(function ($transaction) {
-            try {
-                // إعداد mPDF مع دعم الخط العربي
-                $defaultConfig = (new \Mpdf\Config\ConfigVariables())->getDefaults();
-                $fontDirs = $defaultConfig['fontDir'];
 
-                $defaultFontConfig = (new \Mpdf\Config\FontVariables())->getDefaults();
-                $fontData = $defaultFontConfig['fontdata'];
+    protected $casts = [
+        'amount' => 'float',
 
-                $mpdf = new Mpdf([
-                    'mode' => 'utf-8',
-                    'format' => 'A4',
-                    'default_font' => 'Amiri',
-                    'fontDir' => array_merge($fontDirs, [storage_path('fonts')]),
-                    'fontdata' => $fontData + [
-                            'amiri' => [
-                                'R' => 'Amiri-Regular.ttf',
-                                'B' => 'Amiri-Bold.ttf',
-                            ]
-                        ],
-                    'autoScriptToLang' => true, // مهم للعربية
-                    'autoLangToFont' => true,   // مهم للعربية
-                ]);
-
-                // جلب الـ Blade view كـ HTML
-                $html = view('pdf.transaction_receipt', ['transaction' => $transaction])->render();
-
-                $mpdf->WriteHTML($html);
-
-                // تحديد مكان التخزين
-                $fileName = 'receipts/transaction_' . $transaction->id . '.pdf';
-
-                if (!Storage::disk('public')->exists('receipts')) {
-                    Storage::disk('public')->makeDirectory('receipts');
-                }
-
-                // حفظ الملف
-                Storage::disk('public')->put($fileName, $mpdf->Output('', 'S'));
-
-                // تحديث رابط PDF في DB
-                $transaction->update(['pdf_url' => $fileName]);
-
-            } catch (\Exception $e) {
-                \Log::error('PDF Generation Error: ' . $e->getMessage());
-            }
-        });
-    }
-    */
-    protected static function booted()
-    {
-        static::created(function ($transaction) {
-            GenerateTransactionPDF::dispatchSync($transaction);
-
-        });
-    }
-
-
+    ];
 }

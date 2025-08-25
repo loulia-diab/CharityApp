@@ -29,13 +29,13 @@ class MoneyController extends Controller
         $boxName = $locale === 'ar' ? $box->name_ar : $box->name_en;
 
         // مجموع التبرعات الداخلة للصندوق
-        $totalDonations = Transaction::where('box_id', $box_id)
+        $totalDonations = (float) Transaction::where('box_id', $box_id)
             ->where('type', 'donation')
             ->where('direction', 'in')
             ->sum('amount');
 
         // مجموع المصروفات الخارجة من الصندوق
-        $totalExchanges = Transaction::where('box_id', $box_id)
+        $totalExchanges = (float) Transaction::where('box_id', $box_id)
             ->where('type', 'exchange')
             ->where('direction', 'out')
             ->sum('amount');
@@ -70,19 +70,19 @@ class MoneyController extends Controller
         $campaignName = $locale === 'ar' ? $campaign->title_ar : $campaign->title_en;
 
         // مجموع التبرعات الداخلة للحملة
-        $totalDonations = Transaction::where('campaign_id', $campaign_id)
+        $totalDonations = (float)Transaction::where('campaign_id', $campaign_id)
             ->where('type', 'donation')
             ->where('direction', 'in')
             ->sum('amount');
 
         // مجموع المصروفات الخارجة من الحملة
-        $totalExchanges = Transaction::where('campaign_id', $campaign_id)
+        $totalExchanges =(float) Transaction::where('campaign_id', $campaign_id)
             ->where('type', 'exchange')
             ->where('direction', 'out')
             ->sum('amount');
 
         // الرصيد الحالي = التبرعات - المصروفات
-        $currentBalance = $totalDonations - $totalExchanges;
+        $currentBalance = (float) ($totalDonations - $totalExchanges);
 
         return response()->json([
             'campaign_id'     => $campaign->id,

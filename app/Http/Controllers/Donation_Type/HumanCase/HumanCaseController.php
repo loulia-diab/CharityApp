@@ -11,6 +11,7 @@ use App\Models\HumanCase;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class HumanCaseController extends Controller
@@ -472,8 +473,7 @@ class HumanCaseController extends Controller
             $formattedCases = $humanCases->map(function ($humanCase) use ($locale, $titleField, $descField) {
                 $campaign = $humanCase->campaign;
                 return [
-                    'id' => $humanCase->id,
-                    'campaign_id' => $campaign->id,
+                    'human_case_id' => $humanCase->id,
                     'is_emergency' => $humanCase->is_emergency,
                     'case_name' => $campaign ? $campaign->$titleField : null,  // هنا اسم الحالة حسب اللغة
                     'description' => $campaign ? $campaign->$descField : null,
@@ -482,6 +482,7 @@ class HumanCaseController extends Controller
                     'collected_amount' => $campaign ? $campaign->collected_amount : null,
                     'status_label' => $campaign->status->label($locale),
                     'image' => $campaign ? $campaign->image : null,
+                    'campaign_id'=>$campaign->id,
                 ];
             });
 

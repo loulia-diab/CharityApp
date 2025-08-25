@@ -34,12 +34,12 @@ class VolunteerController extends Controller
         // تنسيق البيانات للإرجاع
         $data = $campaigns->map(function ($campaign) use ($volunteer, $locale) {
             return [
-                'campaign_id'      => $campaign->id,
-                'campaign_title'   => $locale === 'ar' ? $campaign->title_ar : $campaign->title_en,
-                'campaign_image'   => $campaign->image ?? null,
-                'campaign_date'    => $campaign->start_date,
-                'volunteer_id'     => $volunteer->id,
-                'volunteer_name'   => $volunteer->volunteer_request
+                'campaign_id' => $campaign->id,
+                'campaign_title' => $locale === 'ar' ? $campaign->title_ar : $campaign->title_en,
+                'campaign_image' => $campaign->image ?? null,
+                'campaign_date' => $campaign->start_date,
+                'volunteer_id' => $volunteer->id,
+                'volunteer_name' => $volunteer->volunteer_request
                     ? ($locale === 'ar' ? $volunteer->volunteer_request->full_name_ar : $volunteer->volunteer_request->full_name_en)
                     : null,
                 'volunteering_type' => $volunteer->volunteer_request && $volunteer->volunteer_request->types->count()
@@ -83,6 +83,7 @@ class VolunteerController extends Controller
 
         return response()->json($volunteers);
     }
+
     /*
     public function getVolunteerById($id)
     {
@@ -148,7 +149,7 @@ class VolunteerController extends Controller
         }
 
         $data = [
-            'volunteer_id'   => $volunteer->id,
+            'volunteer_id' => $volunteer->id,
             'volunteer_name' => $volunteer->volunteer_request
                 ? $volunteer->volunteer_request->{'full_name_' . $locale}
                 : null,
@@ -156,7 +157,7 @@ class VolunteerController extends Controller
             'volunteering_types' => $volunteer->volunteer_request && $volunteer->volunteer_request->types->count()
                 ? $volunteer->volunteer_request->types->map(function ($type) use ($locale) {
                     return [
-                        'type_id'   => $type->id,
+                        'type_id' => $type->id,
                         'type_name' => $type->{'name_' . $locale},
                     ];
                 })->values()
@@ -164,12 +165,12 @@ class VolunteerController extends Controller
 
             'campaigns' => $volunteer->campaigns->map(function ($campaign) use ($locale) {
                 return [
-                    'campaign_id'    => $campaign->id,
+                    'campaign_id' => $campaign->id,
                     'campaign_title' => $campaign->{'title_' . $locale},
                     'campaign_image' => $campaign->image,
-                    'campaign_date'  => $campaign->start_date,
-                    'category'       => $campaign->category ? [
-                        'id'   => $campaign->category->id,
+                    'campaign_date' => $campaign->start_date,
+                    'category' => $campaign->category ? [
+                        'id' => $campaign->category->id,
                         'name' => $campaign->category->{'name_category_' . $locale},
                     ] : null,
                 ];
@@ -182,6 +183,4 @@ class VolunteerController extends Controller
             'status_code' => 200
         ], 200);
     }
-
 }
-

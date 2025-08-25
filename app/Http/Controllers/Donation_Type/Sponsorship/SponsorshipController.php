@@ -652,18 +652,16 @@ class SponsorshipController extends Controller
         $sponsorships = Sponsorship::whereHas('campaign.category', function ($q) {
             $q->where('main_category', 'Sponsorship');
         })
-            ->with(['campaign', 'beneficiary.beneficiary_request'])
+            ->with(['campaign', 'beneficiary'])
             ->orderByDesc('created_at')
             ->get();
 
         $data = $sponsorships->map(function ($sponsorship) use ($locale) {
             $campaign = $sponsorship->campaign;
             $beneficiary = $sponsorship->beneficiary;
-            $request = $beneficiary?->beneficiary_request;
 
             return [
-                'id' => $sponsorship->id,
-                'campaign_id' => $campaign->id,
+                'sponsorship_id' => $sponsorship->id,
                 'sponsorship_name' => $locale === 'ar' ? $campaign->title_ar : $campaign->title_en,
                 'image' => $campaign->image ? asset('storage/' . $campaign->image) : null,
                 'description' => $beneficiary->description ?? null,
@@ -671,8 +669,9 @@ class SponsorshipController extends Controller
                 'collected_amount' => $campaign->collected_amount,
                 'remaining_amount' => $campaign->goal_amount - $campaign->collected_amount,
                 'beneficiary_id' => $beneficiary->id ?? null,
-                'beneficiary_name' => $request?->{"name_{$locale}"} ?? null,
+                'beneficiary_name' => $beneficiary->name ?? null,
                 'created_at' => $sponsorship->created_at,
+                'campaign_id'=>$campaign->id,
             ];
         });
 

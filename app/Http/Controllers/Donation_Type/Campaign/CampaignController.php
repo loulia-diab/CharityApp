@@ -764,7 +764,70 @@ class CampaignController extends Controller
             ]);
         }
     }
-    public function getVisibleCampaignByIdForUser($mainCategory='Campaign',$id)
+/*
+    public function getAllVisibleCampaignsForUser($mainCategory)
+    {
+        try {
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+
+            // جلب الحملات Active أو Complete (لأن بعض Active ممكن تتحول Complete عند fetch)
+            $campaigns = Campaign::whereHas('category', function ($q) use ($mainCategory) {
+                $q->where('main_category', $mainCategory);
+            })
+                ->select(
+                    'id',
+                    'category_id',
+                    "$titleField as title",
+                    "$descField as description",
+                    'image',
+                    'goal_amount',
+                    'collected_amount',
+                    'status',
+                    'end_date',
+                    'completed_at'
+                )
+                ->get()
+                ->map(function ($campaign) {
+
+                    // تحديث الحالة تلقائياً قبل عرضها
+                    $today = now()->toDateString();
+
+                    if ($campaign->status === 'active' &&
+                        ($campaign->collected_amount >= $campaign->goal_amount ||
+                            ($campaign->end_date && $campaign->end_date->toDateString() <= $today))
+                    ) {
+                        $campaign->status = 'complete';
+                        if (!$campaign->completed_at) {
+                            $campaign->completed_at = now();
+                        }
+                        $campaign->saveQuietly(); // تحديث الـ DB بدون loop
+                    }
+
+                    // حساب المبلغ المتبقي
+                    $campaign->remaining_amount = max(0, $campaign->goal_amount - $campaign->collected_amount);
+
+                    return $campaign;
+                });
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب الحملات بنجاح' : 'Campaigns fetched successfully',
+                'data' => $campaigns,
+                'status' => 200
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحملات' : 'Error fetching campaigns',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
+*/
+
+    public function getVisibleCampaignByIdForUser2($mainCategory='Campaign',$id)
     {
         try {
             $locale = app()->getLocale();
@@ -814,7 +877,68 @@ class CampaignController extends Controller
             ]);
         }
     }
-    public function getVisibleCampaignsByCategoryForUser( $mainCategory, $categoryId)
+    public function getVisibleCampaignByIdForUser($mainCategory = 'Campaign', $id)
+    {
+        try {
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+
+            $campaign = Campaign::where('id', $id)
+                ->where('status', \App\Enums\CampaignStatus::Active)
+                ->whereHas('category', function ($q) use ($mainCategory) {
+                    $q->where('main_category', $mainCategory);
+                })
+                ->select(
+                    'id',
+                    'category_id',
+                    "$titleField as title",
+                    "$descField as description",
+                    'image',
+                    'goal_amount',
+                    'collected_amount',
+                    'start_date',
+                    'end_date',
+                    'status'
+                )
+                ->first();
+
+            if (!$campaign) {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'الحملة غير موجودة أو غير متاحة' : 'Campaign not found or not visible',
+                    'status' => 404
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب تفاصيل الحملة بنجاح' : 'Campaign details fetched successfully',
+                'data' => [
+                    'id' => $campaign->id,
+                    'category_id' => $campaign->category_id,
+                    'title' => $campaign->title,
+                    'description' => $campaign->description,
+                    'image' => $campaign->image,
+                    'goal_amount' => $campaign->goal_amount,
+                    'collected_amount' => $campaign->collected_amount,
+                    'start_date' => $campaign->start_date,
+                    'end_date' => $campaign->end_date,
+                    'status' => $campaign->status,
+                    'remaining_amount' => $campaign->remaining_amount,
+                    'status_label' => $campaign->status_label,
+                    'beneficiaries_count' => $campaign->beneficiaries()->count(), // مضبوط دائمًا
+                ],
+                'status' => 200
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحملة' : 'Error fetching campaign',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
+
+    public function getVisibleCampaignsByCategoryForUser2( $mainCategory, $categoryId)
     {
         $locale = app()->getLocale();
         $titleField = "title_{$locale}";
@@ -835,6 +959,7 @@ class CampaignController extends Controller
                 'image',
                 'goal_amount',
                 'collected_amount',
+                'status'
             );
 
         $campaigns = $query->get()->map(function ($campaign) {
@@ -848,6 +973,42 @@ class CampaignController extends Controller
             'status' => 200
         ]);
     }
+    public function getVisibleCampaignsByCategoryForUser($mainCategory, $categoryId)
+    {
+        $locale = app()->getLocale();
+        $titleField = "title_{$locale}";
+        $descField  = "description_{$locale}";
+
+        $campaigns = Campaign::where('status', \App\Enums\CampaignStatus::Active)
+            ->whereHas('category', function ($q) use ($mainCategory, $categoryId) {
+                $q->where('main_category', $mainCategory);
+                if ($categoryId) {
+                    $q->where('id', $categoryId);
+                }
+            })
+            ->with('category') // إذا حابب تجيب معلومات التصنيف
+            ->get()
+            ->map(function ($campaign) use ($locale, $titleField, $descField) {
+                return [
+                    'id'              => $campaign->id,
+                    'category_id'     => $campaign->category_id,
+                    'title'           => $campaign->$titleField,
+                    'description'     => $campaign->$descField,
+                    'image'           => $campaign->image,
+                    'goal_amount'     => $campaign->goal_amount,
+                    'collected_amount'=> $campaign->collected_amount,
+                    'remaining_amount'=> max(0, $campaign->goal_amount - $campaign->collected_amount),
+
+                ];
+            });
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم جلب العناصر حسب التصنيف بنجاح' : 'Items by category fetched successfully',
+            'data'    => $campaigns,
+            'status'  => 200,
+        ]);
+    }
+
 
     public function getVisibleArchivedCampaigns( $mainCategory = 'Campaign')
     {
@@ -928,7 +1089,7 @@ class CampaignController extends Controller
 
             $campaigns->transform(function ($campaign) use ($locale) {
                 $campaign->status_label = $campaign->status?->label($locale) ?? '';
-                $campaign->created_at_formatted = \Carbon\Carbon::parse($campaign->created_at)->translatedFormat('d F Y');
+               $campaign->created_at_formatted = \Carbon\Carbon::parse($campaign->created_at)->translatedFormat('d F Y');
                 return $campaign;
             });
 

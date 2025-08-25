@@ -997,16 +997,16 @@ class PlanController extends Controller
 
             // إشعار آمن
             try {
-                $recurrenceTextEn = match ($plan->recurrence)  {
-                    'daily' => "This donation will be withdrawn daily from your wallet.",
-                    'weekly' => "This donation will be withdrawn weekly from your wallet.",
-                    'monthly' => "This donation will be withdrawn monthly from your wallet.",
+                $recurrenceTextEn = match ($plan->recurrence) {
+                    \App\Enums\RecurrenceType::Daily => "This donation will be withdrawn daily from your wallet.",
+                    \App\Enums\RecurrenceType::Weekly => "This donation will be withdrawn weekly from your wallet.",
+                    \App\Enums\RecurrenceType::Monthly => "This donation will be withdrawn monthly from your wallet.",
                 };
 
                 $recurrenceTextAr = match ($plan->recurrence) {
-                    'daily' => "سيتم سحب هذا التبرع يوميًا من محفظتك.",
-                    'weekly' => "سيتم سحب هذا التبرع أسبوعيًا من محفظتك.",
-                    'monthly' => "سيتم سحب هذا التبرع شهريًا من محفظتك.",
+                    \App\Enums\RecurrenceType::Daily => "سيتم سحب هذا التبرع يوميًا من محفظتك.",
+                    \App\Enums\RecurrenceType::Weekly => "سيتم سحب هذا التبرع أسبوعيًا من محفظتك.",
+                    \App\Enums\RecurrenceType::Monthly => "سيتم سحب هذا التبرع شهريًا من محفظتك.",
                 };
 
                 $bodyEn = $recurrenceTextEn . " You can stop it anytime if you wish.";

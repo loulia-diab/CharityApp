@@ -827,7 +827,7 @@ class CampaignController extends Controller
     }
 */
 
-    public function getVisibleCampaignByIdForUser($mainCategory='Campaign',$id)
+    public function getVisibleCampaignByIdForUser2($mainCategory='Campaign',$id)
     {
         try {
             $locale = app()->getLocale();
@@ -877,6 +877,67 @@ class CampaignController extends Controller
             ]);
         }
     }
+    public function getVisibleCampaignByIdForUser($mainCategory = 'Campaign', $id)
+    {
+        try {
+            $locale = app()->getLocale();
+            $titleField = "title_{$locale}";
+            $descField = "description_{$locale}";
+
+            $campaign = Campaign::where('id', $id)
+                ->where('status', \App\Enums\CampaignStatus::Active)
+                ->whereHas('category', function ($q) use ($mainCategory) {
+                    $q->where('main_category', $mainCategory);
+                })
+                ->select(
+                    'id',
+                    'category_id',
+                    "$titleField as title",
+                    "$descField as description",
+                    'image',
+                    'goal_amount',
+                    'collected_amount',
+                    'start_date',
+                    'end_date',
+                    'status'
+                )
+                ->first();
+
+            if (!$campaign) {
+                return response()->json([
+                    'message' => $locale === 'ar' ? 'الحملة غير موجودة أو غير متاحة' : 'Campaign not found or not visible',
+                    'status' => 404
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب تفاصيل الحملة بنجاح' : 'Campaign details fetched successfully',
+                'data' => [
+                    'id' => $campaign->id,
+                    'category_id' => $campaign->category_id,
+                    'title' => $campaign->title,
+                    'description' => $campaign->description,
+                    'image' => $campaign->image,
+                    'goal_amount' => $campaign->goal_amount,
+                    'collected_amount' => $campaign->collected_amount,
+                    'start_date' => $campaign->start_date,
+                    'end_date' => $campaign->end_date,
+                    'status' => $campaign->status,
+                    'remaining_amount' => $campaign->remaining_amount,
+                    'status_label' => $campaign->status_label,
+                    'beneficiaries_count' => $campaign->beneficiaries()->count(), // مضبوط دائمًا
+                ],
+                'status' => 200
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحملة' : 'Error fetching campaign',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
+
     public function getVisibleCampaignsByCategoryForUser2( $mainCategory, $categoryId)
     {
         $locale = app()->getLocale();

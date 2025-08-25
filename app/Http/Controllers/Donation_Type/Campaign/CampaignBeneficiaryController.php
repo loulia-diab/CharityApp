@@ -8,6 +8,7 @@ use App\Models\Campaigns\Campaign;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CampaignBeneficiaryController extends Controller
 {

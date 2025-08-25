@@ -877,7 +877,7 @@ class CampaignController extends Controller
             ]);
         }
     }
-    public function getVisibleCampaignsByCategoryForUser( $mainCategory, $categoryId)
+    public function getVisibleCampaignsByCategoryForUser2( $mainCategory, $categoryId)
     {
         $locale = app()->getLocale();
         $titleField = "title_{$locale}";
@@ -912,6 +912,42 @@ class CampaignController extends Controller
             'status' => 200
         ]);
     }
+    public function getVisibleCampaignsByCategoryForUser($mainCategory, $categoryId)
+    {
+        $locale = app()->getLocale();
+        $titleField = "title_{$locale}";
+        $descField  = "description_{$locale}";
+
+        $campaigns = Campaign::where('status', \App\Enums\CampaignStatus::Active)
+            ->whereHas('category', function ($q) use ($mainCategory, $categoryId) {
+                $q->where('main_category', $mainCategory);
+                if ($categoryId) {
+                    $q->where('id', $categoryId);
+                }
+            })
+            ->with('category') // إذا حابب تجيب معلومات التصنيف
+            ->get()
+            ->map(function ($campaign) use ($locale, $titleField, $descField) {
+                return [
+                    'id'              => $campaign->id,
+                    'category_id'     => $campaign->category_id,
+                    'title'           => $campaign->$titleField,
+                    'description'     => $campaign->$descField,
+                    'image'           => $campaign->image,
+                    'goal_amount'     => $campaign->goal_amount,
+                    'collected_amount'=> $campaign->collected_amount,
+                    'remaining_amount'=> max(0, $campaign->goal_amount - $campaign->collected_amount),
+
+                ];
+            });
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم جلب العناصر حسب التصنيف بنجاح' : 'Items by category fetched successfully',
+            'data'    => $campaigns,
+            'status'  => 200,
+        ]);
+    }
+
 
     public function getVisibleArchivedCampaigns( $mainCategory = 'Campaign')
     {

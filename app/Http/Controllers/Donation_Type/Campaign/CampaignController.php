@@ -898,6 +898,7 @@ class CampaignController extends Controller
                 'image',
                 'goal_amount',
                 'collected_amount',
+                'status'
             );
 
         $campaigns = $query->get()->map(function ($campaign) {

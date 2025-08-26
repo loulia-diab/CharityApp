@@ -42,6 +42,7 @@ class Transaction extends Model
     }
 
     //
+    /*
     protected static function booted()
     {
         static::created(function ($transaction) {
@@ -51,9 +52,19 @@ class Transaction extends Model
             $transaction->update(['pdf_url' => $fileName]);
         });
     }
+    */
+    protected static function booted()
+    {
+        static::created(function ($transaction) {
+            // Dispatch the job to generate PDF asynchronously
+            if ($transaction) {
+                dispatch(new \App\Jobs\GenerateTransactionPDF($transaction));
+            }
+        });
+    }
 
-     protected $casts = [
+    protected $casts = [
         'amount' => 'float',
-        
+
     ];
 }

@@ -20,81 +20,85 @@ class ReportController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => false,
-                'message' => __('messages.unauthenticated'),
+                'message' => 'User not authenticated.',
                 'data' => []
             ], 401);
         }
 
-        $locale = app()->getLocale();
+        try {
+            $locale = 'en'; // نثبت اللغة بالإنجليزي للرد
 
-        // جيب IDs الحملات/الكفالات يلي تبرع فيها المستخدم
-        $donatedCampaigns = $user->transactions()
-            ->whereNotNull('campaign_id')
-            ->pluck('campaign_id')
-            ->toArray();
+            // جيب IDs الحملات والكفالات يلي المستخدم متبرع فيها
+            $donatedCampaigns = $user->transactions()
+                ->whereNotNull('campaign_id')
+                ->pluck('campaign_id')
+                ->toArray();
 
-        $donatedSponsorships = $user->plans()
-            ->whereNotNull('sponsorship_id')
-            ->pluck('sponsorship_id')
-            ->toArray();
+            $donatedSponsorships = $user->plans()
+                ->whereNotNull('sponsorship_id')
+                ->pluck('sponsorship_id')
+                ->toArray();
 
-        // إذا ما في تبرعات لا حملات ولا كفالات
-        if (empty($donatedCampaigns) && empty($donatedSponsorships)) {
-            return response()->json([
-                'status' => true,
-                'message' => __('messages.no_reports'),
-                'data' => []
-            ]);
-        }
-
-        // جيب تقارير الحملات والكفالات فقط يلي المستخدم متبرع فيهن
-        $reports = Report::with([
-            'campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image'),
-            // هنا نجيب campaign المرتبط بالكفالة بدل title من sponsorship مباشرة
-            'sponsorship.campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image'),
-        ])
-            ->where(function ($q) use ($donatedCampaigns, $donatedSponsorships) {
-                $q->whereIn('campaign_id', $donatedCampaigns)
-                    ->orWhereIn('sponsorship_id', $donatedSponsorships);
-            })
-            ->get();
-
-        if ($reports->isEmpty()) {
-            return response()->json([
-                'status' => true,
-                'message' => __('messages.no_reports'),
-                'data' => []
-            ]);
-        }
-
-        $data = $reports->map(function ($report) {
-            if ($report->campaign) {
-                $type = 'campaign';
-                $title = $report->campaign->title;
-                $image = $report->campaign->image;
-            } elseif ($report->sponsorship && $report->sponsorship->campaign) {
-                $type = 'sponsorship';
-                $title = $report->sponsorship->campaign->title;
-                $image = $report->sponsorship->campaign->image;
-            } else {
-                $type = 'unknown';
-                $title = '---';
-                $image = null;
+            // إذا ما في تبرعات
+            if (empty($donatedCampaigns) && empty($donatedSponsorships)) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'No reports available.',
+                    'data' => []
+                ]);
             }
 
-            return [
-                'id' => $report->id,
-                'type' => $type,
-                'title' => $title,
-                'image' => $image,
-                'created_at' => $report->created_at,
-            ];
-        });
+            // جيب التقارير مع علاقة الحملة حتى للكفالات
+            $reports = Report::with([
+                'campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image', 'collected_amount', 'goal_amount', 'status'),
+                'sponsorship.campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image', 'collected_amount', 'goal_amount', 'status')
+            ])
+                ->where(function ($q) use ($donatedCampaigns, $donatedSponsorships) {
+                    $q->whereIn('campaign_id', $donatedCampaigns)
+                        ->orWhereIn('sponsorship_id', $donatedSponsorships);
+                })
+                ->get();
 
-        return response()->json([
-            'message' => __('messages.reports_retrieved'),
-            'data' => $data
-        ]);
+            // عدل العلاقة campaign للكفالة لتكون top-level campaign
+            $data = $reports->map(function ($report) {
+                if ($report->campaign) {
+                    $campaign = $report->campaign;
+                } elseif ($report->sponsorship && $report->sponsorship->campaign) {
+                    $campaign = $report->sponsorship->campaign;
+                } else {
+                    $campaign = null;
+                }
+
+                return [
+                    'id' => $report->id,
+                    'campaign_id' => $report->campaign_id,
+                    'sponsorship_id' => $report->sponsorship_id,
+                    'file_url' => $report->file_url,
+                    'created_at' => $report->created_at,
+                    'updated_at' => $report->updated_at,
+                    'campaign' => $campaign ? [
+                        'id' => $campaign->id,
+                        'title' => $campaign->title,
+                        'image' => $campaign->image,
+                        'remaining_amount' => $campaign->goal_amount - $campaign->collected_amount,
+                        'status_label' => strtolower($campaign->status_label),
+                    ] : null,
+                ];
+            });
+
+            return response()->json([
+                'message' => 'reports retrieved successfully',
+                'data' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error fetching reports',
+                'error' => $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
     }
 
 

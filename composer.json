@@ -13,7 +13,7 @@
         "laravel/sanctum": "^4.1",
         "laravel/socialite": "^5.21",
         "laravel/tinker": "^2.9",
-        "mpdf/mpdf": "*",
+        "mpdf/mpdf": "8.2",
         "twilio/sdk": "^8.6"
     },
     "require-dev": {

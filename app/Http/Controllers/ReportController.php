@@ -12,60 +12,95 @@ use Illuminate\Support\Facades\Auth;
 class ReportController extends Controller
 {
     // USER
-    public function  getUserReports()
+
+    public function getUserReports()
     {
-        $locale = app()->getLocale();
         $user = auth()->user();
 
         if (!$user) {
             return response()->json([
-                'message' => $locale === 'ar' ? 'المستخدم غير مسجل الدخول.' : 'User not authenticated.',
-                'status_code' => 401
+                'status' => false,
+                'message' => 'User not authenticated.',
+                'data' => []
             ], 401);
         }
+
         try {
-            // 1. تقارير الحملات التي تم التبرع لها من قبل المستخدم
-            $campaignReports = Report::whereHas('campaign.transactions', function($q) use ($user) {
-                $q->where('transactions.user_id', $user->id);
-            })
-                ->with(['campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image')])
-                ->get();
-/*
-            // 2. تقارير الحملات التي تطوع فيها المستخدم
-            $volunteerReports = Report::whereHas('campaign.volunteers.user', function($q) use ($user) {
-                $q->where('users.id', $user->id);
-            })
-                ->with(['campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image')])
-                ->get();
-*/
-            // 3. تقارير الكفالات التي يملكها المستخدم
-            $sponsorshipReports = Report::whereHas('sponsorship.plans', function($q) use ($user) {
-                $q->where('plans.user_id', $user->id);
-            })
-                ->with(['sponsorship' => fn($q) => $q->select('id', "name_$locale as name", 'image')])
+            $locale = 'en'; // نثبت اللغة بالإنجليزي للرد
+
+            // جيب IDs الحملات والكفالات يلي المستخدم متبرع فيها
+            $donatedCampaigns = $user->transactions()
+                ->whereNotNull('campaign_id')
+                ->pluck('campaign_id')
+                ->toArray();
+
+            $donatedSponsorships = $user->plans()
+                ->whereNotNull('sponsorship_id')
+                ->pluck('sponsorship_id')
+                ->toArray();
+
+            // إذا ما في تبرعات
+            if (empty($donatedCampaigns) && empty($donatedSponsorships)) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'No reports available.',
+                    'data' => []
+                ]);
+            }
+
+            // جيب التقارير مع علاقة الحملة حتى للكفالات
+            $reports = Report::with([
+                'campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image', 'collected_amount', 'goal_amount', 'status'),
+                'sponsorship.campaign' => fn($q) => $q->select('id', "title_$locale as title", 'image', 'collected_amount', 'goal_amount', 'status')
+            ])
+                ->where(function ($q) use ($donatedCampaigns, $donatedSponsorships) {
+                    $q->whereIn('campaign_id', $donatedCampaigns)
+                        ->orWhereIn('sponsorship_id', $donatedSponsorships);
+                })
                 ->get();
 
-            // دمج كل النتائج وترتيبها حسب التاريخ
-            $reports = $campaignReports
-               // ->merge($volunteerReports)
-                ->merge($sponsorshipReports)
-                ->sortByDesc('created_at')
-                ->values();
+            // عدل العلاقة campaign للكفالة لتكون top-level campaign
+            $data = $reports->map(function ($report) {
+                if ($report->campaign) {
+                    $campaign = $report->campaign;
+                } elseif ($report->sponsorship && $report->sponsorship->campaign) {
+                    $campaign = $report->sponsorship->campaign;
+                } else {
+                    $campaign = null;
+                }
+
+                return [
+                    'id' => $report->id,
+                    'campaign_id' => $report->campaign_id,
+                    'sponsorship_id' => $report->sponsorship_id,
+                    'file_url' => $report->file_url,
+                    'created_at' => $report->created_at,
+                    'updated_at' => $report->updated_at,
+                    'campaign' => $campaign ? [
+                        'id' => $campaign->id,
+                        'title' => $campaign->title,
+                        'image' => $campaign->image,
+                        'remaining_amount' => $campaign->goal_amount - $campaign->collected_amount,
+                        'status_label' => strtolower($campaign->status_label),
+                    ] : null,
+                ];
+            });
 
             return response()->json([
-                'message' => $locale === 'ar' ? 'تم جلب التقارير بنجاح' : 'Reports fetched successfully',
-                'data' => $reports,
-                'status_code' => 200
-            ], 200);
+                'message' => 'reports retrieved successfully',
+                'data' => $data
+            ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب التقارير' : 'Error fetching reports',
+                'status' => false,
+                'message' => 'Error fetching reports',
                 'error' => $e->getMessage(),
-                'status_code' => 500
+                'data' => []
             ], 500);
         }
     }
+
 
     //ADMIN
     public function addReport(Request $request)

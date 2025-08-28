@@ -209,6 +209,8 @@ Route::get('/beneficiary/getSorted', [BeneficiaryController::class, 'getSortedBe
 Route::get('/volunteer/getAll', [VolunteerController::class, 'getVolunteerCampaigns']);
 // معلومات المتطوعين بشو تتطوعوا للادمن
 Route::get('/volunteers/{id}', [VolunteerController::class, 'getVolunteerById']);
+// للادمن بدون تفاصيل
+Route::get('/volunteers', [VolunteerController::class, 'getSortedVolunteers']);
 
 // الدوري (كفالة)
 Route::prefix('plans')->group(function () {

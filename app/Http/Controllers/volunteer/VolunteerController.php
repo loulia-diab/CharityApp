@@ -183,4 +183,46 @@ class VolunteerController extends Controller
             'status_code' => 200
         ], 200);
     }
+    public function getSortedVolunteers()
+    {
+        $locale = app()->getLocale();
+
+        // جلب المتطوع مع طلب التطوع + أنواع التطوع + الحملات مع الكاتيجوري
+        $volunteers = Volunteer::with([
+            'volunteer_request.types',
+            'campaigns.category'
+        ])->get();
+
+        if ($volunteers->isEmpty()) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'لا يوجد متطوعين' : 'No volunteers found',
+                'data' => null,
+                'status_code' => 404
+            ], 404);
+        }
+
+        $data = $volunteers->map(function ($volunteer) use ($locale) {
+            return [
+                'volunteer_id'   => $volunteer->id,
+                'volunteer_name' => $volunteer->volunteer_request
+                    ? $volunteer->volunteer_request->{'full_name_' . $locale}
+                    : null,
+
+                'volunteering_types' => $volunteer->volunteer_request && $volunteer->volunteer_request->types->count()
+                    ? $volunteer->volunteer_request->types->map(function ($type) use ($locale) {
+                        return [
+                            'type_id'   => $type->id,
+                            'type_name' => $type->{'name_' . $locale},
+                        ];
+                    })->values()
+                    : []
+            ];
+        });
+
+        return response()->json([
+            'message' => $locale === 'ar' ? 'تم جلب بيانات المتطوعين' : 'Volunteers fetched successfully',
+            'data' => $data,
+            'status_code' => 200
+        ], 200);
+    }
 }

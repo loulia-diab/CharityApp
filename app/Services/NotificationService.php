@@ -115,67 +115,24 @@ class NotificationService
             'body_ar'   => 'required|string',
         ]);
 
-        $user = \App\Models\User::findOrFail($request->user_id);
-
-        // اللغة
+        $user   = \App\Models\User::findOrFail($request->user_id);
         $locale = $user->preferred_language ?? app()->getLocale();
         $title  = $locale === 'ar' ? $request->title_ar : $request->title_en;
         $body   = $locale === 'ar' ? $request->body_ar  : $request->body_en;
 
-        // أجهزة اليوزر
         $devices = \App\Models\UserDevice::where('user_id', $user->id)->get();
         if ($devices->isEmpty()) {
             return response()->json(['message' => 'User does not have any device tokens'], 400);
         }
 
-        // Firebase credentials
-        $credentialsFilePath = storage_path(env('FIREBASE_CREDENTIALS'));
+        // Firebase
         $client = new \Google\Client();
-        $client->setAuthConfig($credentialsFilePath);
+        $client->setAuthConfig(storage_path(env('FIREBASE_CREDENTIALS')));
         $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
         $client->refreshTokenWithAssertion();
         $token = $client->getAccessToken();
 
-        $responses = [];
-
-        foreach ($devices as $device) {
-            $data = [
-                "message" => [
-                    "token" => $device->fcm_token,
-                    "notification" => [
-                        "title" => $title,
-                        "body"  => $body,
-                    ],
-                    "data" => [
-                        "id"         => (string) now()->timestamp, // أو notification->id بعد التخزين
-                        "created_at" => now()->format('Y-m-d H:i'),
-                    ]
-                ]
-            ];
-
-            try {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/charity-app-12345/messages:send");
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-                curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                    "Authorization: Bearer {$token['access_token']}",
-                    "Content-Type: application/json"
-                ]);
-                $response = curl_exec($ch);
-                curl_close($ch);
-
-                $responses[] = [
-                    'request'  => $data,
-                    'response' => json_decode($response, true),
-                ];
-            } catch (\Throwable $e) {
-                \Log::error("FCM send exception: {$e->getMessage()}");
-            }
-        }
-
-        // خزن الإشعار
+        // خزّني الإشعار أول شي
         $notification = Notification::create([
             'user_id'   => $user->id,
             'title_en'  => $request->title_en,
@@ -184,9 +141,38 @@ class NotificationService
             'body_ar'   => $request->body_ar,
         ]);
 
-        //  رجّع نفس الـ structure المطلوب
-        return response()->json($responses[0]['request']);
+        // جهزي الـ payload (رح نرجع أول واحد)
+        $data = [
+            "message" => [
+                "token" => $devices->first()->fcm_token,
+                "notification" => [
+                    "title" => $title,
+                    "body"  => $body,
+                ],
+                "data" => [
+                    "id"         => (string) $notification->id,
+                    "created_at" => $notification->created_at->format('Y-m-d H:i'),
+                ]
+            ]
+        ];
+
+        // ابعتي للـ FCM
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/charity-app-12345/messages:send");
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$token['access_token']}",
+            "Content-Type: application/json"
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+
+        // رجّع نفس الـ structure المطلوب
+        return response()->json($data);
     }
+
 
     /*
     public function sendFcmNotification(Request $request)

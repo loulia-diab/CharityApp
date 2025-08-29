@@ -447,7 +447,7 @@ class BeneficiaryController extends Controller
             ->get()
             ->map(function ($b) use ($locale, $request) {
                 $data = [
-                    'id' => $b->id,
+                    'beneficiary_id' => $b->id,
                     'full_name' => $b->beneficiary_request?->{"name_{$locale}"},
                     // 'details' => $b->beneficiary_request?->details ?? null,
                 ];

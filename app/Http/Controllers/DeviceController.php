@@ -18,12 +18,13 @@ class DeviceController extends Controller
 
         // حفظ أو تحديث الـ token
         UserDevice::updateOrCreate(
+            ['user_id' => $user->id],
             [
-                'user_id' => $user->id,
-                'fcm_token' => $request->fcm_token
-            ],
-            ['last_used_at' => now()]
+                'fcm_token'   => $request->fcm_token,
+                'last_used_at'=> now()
+            ]
         );
+
 
         return response()->json(['message' => 'Device registered successfully']);
     }

@@ -128,7 +128,8 @@ class NotificationService
         }
 
         // Firebase credentials
-        $credentialsFilePath = storage_path('app/firebase/chairty-app-3dd34-firebase-adminsdk-fbsvc-2746f9ae5b.json');
+      //  $credentialsFilePath = storage_path('app/firebase/chairty-app-3dd34-firebase-adminsdk-fbsvc-2746f9ae5b.json');
+        $credentialsFilePath = storage_path(env('FIREBASE_CREDENTIALS'));
         $client = new GoogleClient();
         $client->setAuthConfig($credentialsFilePath);
         $client->addScope('https://www.googleapis.com/auth/firebase.messaging');

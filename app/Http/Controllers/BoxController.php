@@ -40,4 +40,27 @@ class BoxController extends Controller
 
         return response()->json($boxData);
     }
+    public function getAllBoxes()
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        $locale = app()->getLocale(); // اللغة الحالية (ar أو en)
+
+        $boxes = Box::select('id', 'name_ar', 'name_en')
+            ->get()
+            ->map(function ($box) use ($locale) {
+                return [
+                    'id'   => $box->id,
+                    'name' => $locale === 'ar' ? $box->name_ar : $box->name_en,
+                ];
+            });
+
+        return response()->json([
+            'boxes' => $boxes,
+        ]);
+    }
 }

@@ -279,7 +279,7 @@ class TransactionController extends Controller
                 }
             });
 
-            // 🔔 إرسال إشعار بعد نجاح المعاملة
+            //  إرسال إشعار بعد نجاح المعاملة
             try {
                 $notificationService = app()->make(\App\Services\NotificationService::class);
 

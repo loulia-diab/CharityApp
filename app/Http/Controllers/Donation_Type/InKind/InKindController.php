@@ -17,7 +17,7 @@ class InKindController extends Controller
     public function addInKind(Request $request)
     {
         $locale = app()->getLocale();
-        $otp = '123456'; // يجب استبداله بمنطق تحقق حقيقي
+        $otp = '312297'; // يجب استبداله بمنطق تحقق حقيقي
 
         $request->validate([
             'address' => 'required|string|max:255',

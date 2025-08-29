@@ -14,7 +14,7 @@ class UserAuthController extends Controller
 {
     public function register(Request $request)
     {
-        $otp = '123456'; // كود التحقق الثابت
+        $otp = '351894'; // كود التحقق الثابت
 
         try {
             $request->validate([
@@ -104,7 +104,7 @@ class UserAuthController extends Controller
 
     public function resetPassword(Request $request)
     {
-        $otp = '123456';
+        $otp = '759412';
 
         $request->validate([
             'phone' => 'required|string|exists:users,phone',

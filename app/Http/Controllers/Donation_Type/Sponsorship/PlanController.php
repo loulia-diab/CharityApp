@@ -1040,7 +1040,7 @@ class PlanController extends Controller
                     'is_activated' => $plan->is_activated,
                     'receipt_url' => $transaction?->pdf_url
                 ]
-            ], 201);
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();

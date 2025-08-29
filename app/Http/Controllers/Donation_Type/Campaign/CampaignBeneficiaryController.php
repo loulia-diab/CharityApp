@@ -58,7 +58,7 @@ class CampaignBeneficiaryController extends Controller
                 Beneficiary::whereIn('id', $newIds)->update(['is_sorted' => true]);
             });
 
-            // 🔔 إرسال الإشعارات بعد نجاح المعاملة
+            //  إرسال الإشعارات بعد نجاح المعاملة
             try {
                 $notificationService = app()->make(\App\Services\NotificationService::class);
 

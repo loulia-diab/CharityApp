@@ -1232,7 +1232,7 @@ class HumanCaseController extends Controller
             ]);
         }
     }
-
+/*
     public function getVisibleEmergencyHumanCaseByIdForUser($mainCategory, $id)
     {
         try {
@@ -1343,6 +1343,62 @@ class HumanCaseController extends Controller
             ]);
         }
     }
+
+*/
+    public function getAllVisibleEmergencyHumanCasesForUser($mainCategory)
+    {
+        $locale = app()->getLocale();
+        $titleField = "title_{$locale}";
+        $descField = "description_{$locale}";
+
+        try {
+            $humanCases = HumanCase::with(['campaign' => function ($query) use ($mainCategory, $titleField, $descField) {
+                $query->where('status', CampaignStatus::Active)
+                    ->whereHas('category', function ($q) use ($mainCategory) {
+                        $q->where('main_category', $mainCategory);
+                    })
+                    ->select(
+                        'id',
+                        'category_id',
+                        "{$titleField} as title",
+                        "{$descField} as description",
+                        'image',
+                        'goal_amount',
+                        'collected_amount',
+                    );
+            }])
+                ->where('is_emergency', true)
+                ->get()
+                ->filter(fn($humanCase) => $humanCase->campaign !== null)
+                ->map(function ($humanCase) {
+                    $campaign = $humanCase->campaign;
+                    return [
+                        'id' => $humanCase->id,
+                        'category_id' => $campaign->category_id,
+                        'title' => $campaign->title,
+                        'description' => $campaign->description,
+                        'image' => $campaign->image,
+                        'goal_amount' => $campaign->goal_amount,
+                        'collected_amount' => $campaign->collected_amount,
+                        'remaining_amount' => max(0, $campaign->goal_amount - $campaign->collected_amount),
+                    ];
+                })
+                ->values(); // لإعادة ترتيب الـ array بدون أي مفتاح id
+
+            return response()->json([
+                'message' => $locale === 'ar' ? 'تم جلب الحالات الإنسانية الطارئة بنجاح' : 'Emergency human cases fetched successfully',
+                'data' => $humanCases,
+                'status' => 200
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $locale === 'ar' ? 'حدث خطأ أثناء جلب الحالات الطارئة' : 'Error fetching emergency human cases',
+                'error' => $e->getMessage(),
+                'status' => 500
+            ]);
+        }
+    }
+
 
     public function getVisibleArchivedHumanCases($mainCategory = 'HumanCase')
     {

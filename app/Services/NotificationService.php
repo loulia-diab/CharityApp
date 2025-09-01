@@ -125,13 +125,6 @@ class NotificationService
             return response()->json(['message' => 'User does not have any device tokens'], 400);
         }
 
-        // Firebase
-        $client = new \Google\Client();
-        $client->setAuthConfig(storage_path(env('FIREBASE_CREDENTIALS')));
-        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-        $client->refreshTokenWithAssertion();
-        $token = $client->getAccessToken();
-
         // خزّني الإشعار أول شي
         $notification = Notification::create([
             'user_id'   => $user->id,
@@ -141,7 +134,7 @@ class NotificationService
             'body_ar'   => $request->body_ar,
         ]);
 
-        // جهزي الـ payload (رح نرجع أول واحد)
+        // جهزي الـ payload Notification-only
         $data = [
             "message" => [
                 "token" => $devices->first()->fcm_token,
@@ -151,12 +144,41 @@ class NotificationService
                 ],
                 "data" => [
                     "id"         => (string) $notification->id,
+                    "title"      => $title,   // 🔹 أرسله كمان بالـ data
+                    "body"       => $body,    // 🔹 أرسله كمان بالـ data
                     "created_at" => $notification->created_at->format('Y-m-d H:i'),
+                ],
+                "android" => [
+                    "priority" => "HIGH",
+                    "notification" => [
+                        "sound" => "default",
+                        "click_action" => "FLUTTER_NOTIFICATION_CLICK"
+                    ]
+                ],
+                "apns" => [
+                    "headers" => [
+                        "apns-priority" => "10"
+                    ],
+                    "payload" => [
+                        "aps" => [
+                            "sound" => "default",
+                            "alert" => [
+                                "title" => $title,
+                                "body" => $body
+                            ]
+                        ]
+                    ]
                 ]
             ]
         ];
 
         // ابعتي للـ FCM
+        $client = new \Google\Client();
+        $client->setAuthConfig(storage_path(env('FIREBASE_CREDENTIALS')));
+        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+        $client->refreshTokenWithAssertion();
+        $token = $client->getAccessToken();
+
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/charity-app-12345/messages:send");
         curl_setopt($ch, CURLOPT_POST, true);
@@ -169,9 +191,9 @@ class NotificationService
         curl_exec($ch);
         curl_close($ch);
 
-        // رجّع نفس الـ structure المطلوب
         return response()->json($data);
     }
+
 
 
     /*

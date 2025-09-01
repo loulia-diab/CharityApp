@@ -45,7 +45,7 @@ class Campaign extends Model
             $shouldComplete = false;
 
             // الشرط الأول: المبلغ مكتمل
-            if ($campaign->collected_amount >= $campaign->goal_amount &&
+            if ($campaign->collected_amount == $campaign->goal_amount &&
                 $campaign->status === CampaignStatus::Active
             ) {
                 $shouldComplete = true;
